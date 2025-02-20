@@ -84,10 +84,10 @@
 
 	<!-- actuators -->
 	<actuator>
-		<motor name="thigh_left_motor" joint="thigh_left" ctrllimited="false" gear="50"/>
-    	<motor name="shin_left_motor" joint="shin_left" ctrllimited="false" gear="20"/>
-		<motor name="thigh_right_motor" joint="thigh_right" ctrllimited="false" gear="50"/>
-		<motor name="shin_right_motor" joint="shin_right" ctrllimited="false" gear="20"/>
+		<motor name="thigh_left_motor" joint="thigh_left" ctrllimited="false" gear="1"/>
+    	<motor name="shin_left_motor" joint="shin_left" ctrllimited="false" gear="1"/>
+		<motor name="thigh_right_motor" joint="thigh_right" ctrllimited="false" gear="1"/>
+		<motor name="shin_right_motor" joint="shin_right" ctrllimited="false" gear="1"/>
 	</actuator>
 
 </mujoco>

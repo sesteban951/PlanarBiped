@@ -1,8 +1,11 @@
+
 import mujoco
 import numpy as np
 import glfw
-import time
 
+####################################################################################
+# Auxiliary functions
+####################################################################################
 
 # Function to compute the center of mass (CoM) of the model
 def compute_com(model, data):
@@ -38,6 +41,76 @@ def update_camera_to_com(model, data, cam):
     cam.azimuth = 90  # Camera azimuth angle (adjust as needed)
 
 
+# compute the desired joint positions and velocities
+def compute_desired_joint_state(sim_time, data):
+    
+    # Define desired joint positions and velocities based on time
+    q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
+    qd_des = np.array([0.0, 0.0,  0.0, 0.0])  # Initial joint positions
+
+    # sin wave trajectory
+    f = 1.0
+    w = 2 * np.pi * f
+    A = 0.3
+    offset = 0.5
+
+    q_des[0] = offset + A * np.sin(w * sim_time)
+    q_des[2] = -q_des[0]
+
+    qd_des[0] = A * w * np.cos(w * sim_time)
+    qd_des[2] = -qd_des[0]
+    
+    return q_des, qd_des
+
+
+# Function to compute torques based on desired position and velocity
+def compute_torques(q_des, qd_des, data):
+
+    # joint gains
+    kp_hip = 100
+    kd_hip = 10
+
+    kp_knee = 150
+    kd_knee = 10
+
+    # unpack the current joint state
+    q_left_hip = data.qpos[0]
+    q_left_knee = data.qpos[1]
+    q_right_hip = data.qpos[2]
+    q_right_knee = data.qpos[3]
+
+    qd_left_hip = data.qvel[0]
+    qd_left_knee = data.qvel[1]
+    qd_right_hip = data.qvel[2]
+    qd_right_knee = data.qvel[3]
+
+    # unpack the desired joint state
+    q_des_left_hip = q_des[0]
+    q_des_left_knee = q_des[1]
+    q_des_right_hip = q_des[2]
+    q_des_right_knee = q_des[3]
+
+    qd_des_left_hip = qd_des[0]
+    qd_des_left_knee = qd_des[1]
+    qd_des_right_hip = qd_des[2]
+    qd_des_right_knee = qd_des[3]
+    
+    # compute the torques
+    tau_left_hip = kp_hip * (q_des_left_hip - q_left_hip) + kd_hip * (qd_des_left_hip - qd_left_hip)
+    tau_left_knee = kp_knee * (q_des_left_knee - q_left_knee) + kd_knee * (qd_des_left_knee - qd_left_knee)
+    tau_right_hip = kp_hip * (q_des_right_hip - q_right_hip) + kd_hip * (qd_des_right_hip - qd_right_hip)
+    tau_right_knee = kp_knee * (q_des_right_knee - q_right_knee) + kd_knee * (qd_des_right_knee - qd_right_knee)
+
+    # pack the torques
+    tau = np.array([tau_left_hip, tau_left_knee, tau_right_hip, tau_right_knee])
+    
+    return tau
+    
+
+####################################################################################
+# Simulaiton
+####################################################################################
+
 # Simulation loop
 def run_simulation():
 
@@ -52,7 +125,7 @@ def run_simulation():
     if not glfw.init():
         raise Exception("Could not initialize GLFW")
 
-    window = glfw.create_window(720, 480, "MuJoCo Simulation", None, None)
+    window = glfw.create_window(1920, 1080, "MuJoCo Simulation", None, None)
     glfw.make_context_current(window)
 
     # Create a camera to render the scene
@@ -63,35 +136,33 @@ def run_simulation():
     scene = mujoco.MjvScene(model, maxgeom=10000)
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
-    # Set the initial configuration of the robot
-    # qpos = np.array([1.57,  -1.57, 0.0,  0.0])       
-    qpos = np.zeros(4)  # Initial joint velocities
-    qvel = np.zeros(4)  # Initial joint velocities
+    # Set the initial configuration of the robot   
+    qpos = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
+    qvel = np.array([0.0, 0.0,  0.0, 0.0])  # Initial joint positions
     data.qpos[:] = qpos
     data.qvel[:] = qvel
 
-    print("position", data.qpos)    
-    print("velocity", data.qvel)
-
+    # Initialize a counter for rendering frames
     step_counter = 0 # Frame counter
     frame_skip = 15  # Only render every so number of steps
 
+    # Main simulation loop
     while not glfw.window_should_close(window):
 
         # get the current mujoco time
-        current_time = data.time
+        sim_time = data.time
 
-        # set the desired position and velocity
-        hip_pos_des = 1.2
-        hip_pos_act = data.qpos[0]
-        hip_vel_des = 0.0
-        hip_vel_act = data.qvel[0]
-        data.ctrl[0] = 50 * (hip_pos_des - hip_pos_act) + 0.5 * (hip_vel_des - hip_vel_act)
-        
+        # compute the desired joint positions and velocities
+        q_des, qd_des = compute_desired_joint_state(sim_time, data)
 
-        # print the positions
-        print("position", data.qpos)
+        # compute the torques
+        tau = compute_torques(q_des, qd_des, data)
 
+        # Apply the computed torques to the actuators
+        data.ctrl[0] = tau[0]
+        data.ctrl[1] = tau[1]
+        data.ctrl[2] = tau[2]
+        data.ctrl[3] = tau[3]
 
         # Update the camera to track the center of mass
         update_camera_to_com(model, data, cam)
@@ -99,6 +170,7 @@ def run_simulation():
         # Step the simulation
         mujoco.mj_step(model, data)
 
+        # Increment the step counter
         step_counter += 1
         if step_counter % frame_skip == 0:
             # Get framebuffer size and create viewport for rendering
@@ -114,6 +186,7 @@ def run_simulation():
 
         # Poll for window events like keypress or close
         glfw.poll_events()
+
 
 ####################################################################################
 # Main execution
