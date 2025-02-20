@@ -41,18 +41,18 @@
 		<geom name="origin_sphere" type="sphere" size="0.025" pos="0 0 0" rgba="1 0 0 1" conaffinity="0" contype="0"/>
 
 		<!-- Robot -->
-		<body name="torso" pos="0 0 1.5">
+		<body name="torso" pos="0 0 0.6">
 
 			<!-- A light that tracks the CoM -->
 			<light pos="0 0 3" dir="0 0 -1" directional="false" mode="trackcom"/>
 
 			<!-- Floating Base -->
-			<!-- <joint name="root_x" type="slide" axis="1 0 0"/> -->
-			<!-- <joint name="root_y" type="slide" axis="0 1 0"/> -->
-			<!-- <joint name="root_z" type="slide" axis="0 0 1"/> -->
+			<joint name="root_x" type="slide" axis="1  0 0"/>
+			<joint name="root_z" type="slide" axis="0  0 1"/>
+			<joint name="root_y" type="hinge" axis="0 -1 0"/>
 
 			<!-- torso -->
-			<geom name="torso" type="capsule" size="0.075 0.4" pos="0 0 0.0" rgba="1.0 0.424 0.047 1.0"/>
+			<geom name="torso" type="capsule" size="0.075 0.4" pos="0 0 0.0" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
 
 			<!-- left thigh -->
 			<body name="thigh_left" pos="0.0 0.1 -0.4">

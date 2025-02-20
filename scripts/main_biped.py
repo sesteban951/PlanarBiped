@@ -46,21 +46,17 @@ def update_camera_to_com(model, data, cam):
 # compute the desired joint positions and velocities
 def compute_desired_joint_state(sim_time, data):
     
-    # Define desired joint positions and velocities based on time
+    # standing configuration
     q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-    qd_des = np.array([0.0, 0.0,  0.0, 0.0])  # Initial joint positions
+    qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
 
-    # sin wave trajectory
-    f = 1.0
+    # rocking out motion
+    f = 0.5
     w = 2 * np.pi * f
-    A = 0.3
-    offset = 0.5
-
-    q_des[0] = offset + A * np.sin(w * sim_time)
-    q_des[2] = -q_des[0]
-
-    qd_des[0] = A * w * np.cos(w * sim_time)
-    qd_des[2] = -qd_des[0]
+    q_des[0] +=  0.5 * np.sin(w * sim_time)  # Left hip
+    q_des[1] += -0.4 - 0.1 * np.sin(w * sim_time)  # Left hip
+    q_des[2] += -0.0 + 0.1* np.sin(w * sim_time)  # Right hip
+    q_des[3] += -0.2 + 0.1 * np.sin(w * sim_time)  # Right hip
     
     return q_des, qd_des
 
@@ -76,15 +72,15 @@ def compute_torques(q_des, qd_des, data):
     kd_knee = 10
 
     # unpack the current joint state
-    q_left_hip = data.qpos[0]
-    q_left_knee = data.qpos[1]
-    q_right_hip = data.qpos[2]
-    q_right_knee = data.qpos[3]
+    q_left_hip = data.qpos[3]
+    q_left_knee = data.qpos[4]
+    q_right_hip = data.qpos[5]
+    q_right_knee = data.qpos[6]
 
-    qd_left_hip = data.qvel[0]
-    qd_left_knee = data.qvel[1]
-    qd_right_hip = data.qvel[2]
-    qd_right_knee = data.qvel[3]
+    qd_left_hip = data.qvel[3]
+    qd_left_knee = data.qvel[4]
+    qd_right_hip = data.qvel[5]
+    qd_right_knee = data.qvel[6]
 
     # unpack the desired joint state
     q_des_left_hip = q_des[0]
@@ -140,7 +136,7 @@ def run_simulation():
     if not glfw.init():
         raise Exception("Could not initialize GLFW")
 
-    window = glfw.create_window(1920, 1080, "Planar Biped Sim", None, None)
+    window = glfw.create_window(720, 480, "Planar Biped Sim", None, None)
     glfw.make_context_current(window)
 
     # Create a camera to render the scene
@@ -152,8 +148,12 @@ def run_simulation():
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
     # Set the initial configuration of the robot   
-    qpos = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-    qvel = np.array([0.0, 0.0,  0.0, 0.0])  # Initial joint positions
+    qpos = np.array([0.0, 1.0,                # position x and z 
+                     0.0,                     # theta body
+                     0.5, -0.2, -0.3, -0.2])  # left thigh, left knee, right thigh, right knee
+    qvel = np.array([0.0, 0.0, 
+                     0.0, 
+                     0.0, 0.0,  0.0, 0.0])  
     data.qpos[:] = qpos
     data.qvel[:] = qvel
 
@@ -163,7 +163,7 @@ def run_simulation():
 
     # max sim time
     sim_time = 0.0
-    max_sim_time = 5.0
+    max_sim_time = 15.0
 
     # Main simulation loop
     while (not glfw.window_should_close(window)) and (sim_time < max_sim_time):
