@@ -26,7 +26,7 @@
 
     <!-- Default properties -->
 	<default>
-		<geom conaffinity="0" contype="0" density="0.5" friction="1.0 1.0 1.0"/>
+		<geom conaffinity="0" contype="0" density="100" friction="1.0 1.0 1.0"/>
 		<default class="visual">
 			<geom conaffinity="0" contype="0"/>
 		</default>
@@ -52,29 +52,29 @@
 			<!-- <joint name="root_z" type="slide" axis="0 0 1"/> -->
 
 			<!-- torso -->
-			<geom name="torso" type="capsule" size="0.05 0.4" pos="0 0 0.0" rgba="1.0 0.424 0.047 1.0"/>
+			<geom name="torso" type="capsule" size="0.075 0.4" pos="0 0 0.0" rgba="1.0 0.424 0.047 1.0"/>
 
 			<!-- left thigh -->
 			<body name="thigh_left" pos="0.0 0.1 -0.4">
-				<geom name="thigh_left" type="capsule" size="0.05 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0"/>
-				<joint name="thigh_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.57 1.57"/>
+				<geom name="thigh_left" type="capsule" size="0.075 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0"/>
+				<joint name="thigh_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 1.5"/>
 
 				<!-- left shin -->
 				<body name="shin_left" pos="0.0 0.0 -0.5">
-					<geom name="shin_left" type="capsule" size="0.05 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
-					<joint name="shin_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.57 0.0"/>
+					<geom name="shin_left" type="capsule" size="0.075 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+					<joint name="shin_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 0.0"/>
 				</body>
 			</body>
 
 			<!-- right thigh -->
 			<body name="thigh_right" pos="0.0 -0.1 -0.4">
-				<geom name="thigh_right" type="capsule" size="0.05 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0"/>
-				<joint name="thigh_right" axis="0 1 0" pos="0 0 0.0" limited="true" range="-1.57 1.57"/>
+				<geom name="thigh_right" type="capsule" size="0.075 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0"/>
+				<joint name="thigh_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 1.5"/>
 
 				<!-- right shin -->
 				<body name="shin_right" pos="0.0 0.0 -0.5">
-					<geom name="shin_right" type="capsule" size="0.05 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
-					<joint name="shin_right" axis="0 1 0" pos="0 0 0.0" limited="true" range="-1.57 0.0"/>
+					<geom name="shin_right" type="capsule" size="0.075 0.25" pos="0.0 0.0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+					<joint name="shin_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 0.0"/>
 				</body>
 			</body>
 
@@ -84,18 +84,10 @@
 
 	<!-- actuators -->
 	<actuator>
-		<!-- Left thigh motor -->
-		<motor name="thigh_left_motor" joint="thigh_left"  gear="1"/>
-
-    	<!-- Left shin motor -->
-    	<motor name="shin_left_motor" joint="shin_left" gear="1"/>
-
-		<!-- Right thigh motor -->
-		<motor name="thigh_right_motor" joint="thigh_right" gear="1"/>
-
-		<!-- Right shin motor -->
-		<motor name="shin_right_motor" joint="shin_right" gear="1"/>
-		
+		<motor name="thigh_left_motor" joint="thigh_left" ctrllimited="false" gear="50"/>
+    	<motor name="shin_left_motor" joint="shin_left" ctrllimited="false" gear="20"/>
+		<motor name="thigh_right_motor" joint="thigh_right" ctrllimited="false" gear="50"/>
+		<motor name="shin_right_motor" joint="shin_right" ctrllimited="false" gear="20"/>
 	</actuator>
 
 </mujoco>
