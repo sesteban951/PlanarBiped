@@ -2,6 +2,8 @@
 import mujoco
 import numpy as np
 import glfw
+import time
+import os
 
 ####################################################################################
 # Auxiliary functions
@@ -117,6 +119,19 @@ def run_simulation():
     # Path to your MuJoCo XML model
     xml_path = "../models/biped/biped.xml"
 
+    # csv data path
+    time_file_path = "../data/time.csv"
+    pos_file_path = "../data/pos.csv"
+    vel_file_path = "../data/vel.csv"
+
+    # remove the data files if they exist
+    try:
+        os.remove(time_file_path)
+        os.remove(pos_file_path)
+        os.remove(vel_file_path)
+    except OSError:
+        pass
+
     # Load the model
     model = mujoco.MjModel.from_xml_path(xml_path)
     data = mujoco.MjData(model)
@@ -125,7 +140,7 @@ def run_simulation():
     if not glfw.init():
         raise Exception("Could not initialize GLFW")
 
-    window = glfw.create_window(1920, 1080, "MuJoCo Simulation", None, None)
+    window = glfw.create_window(1920, 1080, "Planar Biped Sim", None, None)
     glfw.make_context_current(window)
 
     # Create a camera to render the scene
@@ -146,11 +161,23 @@ def run_simulation():
     step_counter = 0 # Frame counter
     frame_skip = 15  # Only render every so number of steps
 
+    # max sim time
+    sim_time = 0.0
+    max_sim_time = 5.0
+
     # Main simulation loop
-    while not glfw.window_should_close(window):
+    while (not glfw.window_should_close(window)) and (sim_time < max_sim_time):
 
         # get the current mujoco time
         sim_time = data.time
+
+        # write the current time and state to csv
+        with open(time_file_path, 'a') as f:
+            f.write(f"{sim_time}\n")
+        with open(pos_file_path, 'a') as f:
+            f.write(f"{data.qpos[0]},{data.qpos[1]},{data.qpos[2]},{data.qpos[3]}\n")
+        with open(vel_file_path, 'a') as f:
+            f.write(f"{data.qvel[0]},{data.qvel[1]},{data.qvel[2]},{data.qvel[3]}\n")
 
         # compute the desired joint positions and velocities
         q_des, qd_des = compute_desired_joint_state(sim_time, data)
