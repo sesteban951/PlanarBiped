@@ -119,12 +119,14 @@ def run_simulation():
     time_file_path = "../data/time.csv"
     pos_file_path = "../data/pos.csv"
     vel_file_path = "../data/vel.csv"
+    tau_file_path = "../data/tau.csv"
 
     # remove the data files if they exist
     try:
         os.remove(time_file_path)
         os.remove(pos_file_path)
         os.remove(vel_file_path)
+        os.remove(tau_file_path)
     except OSError:
         pass
 
@@ -163,21 +165,13 @@ def run_simulation():
 
     # max sim time
     sim_time = 0.0
-    max_sim_time = 15.0
+    max_sim_time = 10.0
 
     # Main simulation loop
     while (not glfw.window_should_close(window)) and (sim_time < max_sim_time):
 
         # get the current mujoco time
         sim_time = data.time
-
-        # write the current time and state to csv
-        with open(time_file_path, 'a') as f:
-            f.write(f"{sim_time}\n")
-        with open(pos_file_path, 'a') as f:
-            f.write(f"{data.qpos[0]},{data.qpos[1]},{data.qpos[2]},{data.qpos[3]}\n")
-        with open(vel_file_path, 'a') as f:
-            f.write(f"{data.qvel[0]},{data.qvel[1]},{data.qvel[2]},{data.qvel[3]}\n")
 
         # compute the desired joint positions and velocities
         q_des, qd_des = compute_desired_joint_state(sim_time, data)
@@ -193,6 +187,16 @@ def run_simulation():
 
         # Update the camera to track the center of mass
         update_camera_to_com(model, data, cam)
+
+        # write the current time and state to csv
+        with open(time_file_path, 'a') as f:
+            f.write(f"{sim_time}\n")
+        with open(pos_file_path, 'a') as f:
+            f.write(f"{data.qpos[0]},{data.qpos[1]},{data.qpos[2]},{data.qpos[3]},{data.qpos[4]},{data.qpos[5]},{data.qpos[6]}\n")
+        with open(vel_file_path, 'a') as f:
+            f.write(f"{data.qvel[0]},{data.qvel[1]},{data.qvel[2]},{data.qvel[3]},{data.qvel[4]},{data.qvel[5]},{data.qvel[6]}\n")
+        with open(tau_file_path, 'a') as f:
+            f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
         
         # Step the simulation
         mujoco.mj_step(model, data)
