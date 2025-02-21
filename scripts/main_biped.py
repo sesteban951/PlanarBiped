@@ -74,9 +74,9 @@ def compute_forward_kinematics(data):
 
     # unpack the base position
     p_base_W = np.array([data.qpos[0], data.qpos[1]]).reshape(2, 1)
-    theta = data.qpos[2]
-    R = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta),  np.cos(theta)]])
+    theta_W = data.qpos[2]
+    R = np.array([[np.cos(theta_W), -np.sin(theta_W)],
+                  [np.sin(theta_W),  np.cos(theta_W)]])
 
     # unpack the joint angles
     q_HL = data.qpos[3]
@@ -90,24 +90,37 @@ def compute_forward_kinematics(data):
     p_right_B = np.array([l1 * np.sin(q_HR) + l2 * np.sin(q_HR + q_KR),
                          -l1 * np.cos(q_HR) - l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
     
-    # compute the positions of the feet in WORLD frame
-    p_left_W = p_base_W + R @ p_left_B
-    p_right_W = p_base_W + R @ p_right_B
+    # compute the outputs
+    y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
+    y_left_W = p_base_W + R @ p_left_B
+    y_right_W = p_base_W + R @ p_right_B
     
-    return p_left_W, p_right_W
+    return y_base_W, y_left_W, y_right_W
 
-# compute inver kineamtics
-def compute_inverse_kinematics(p_left, p_right):
+# compute inverse kineamtics given feet position in world frame
+def compute_inverse_kinematics(y_base_W, y_left_W, y_right_W):
 
     # lengths of the legs
     l1 = 0.5 # length of the thigh
     l2 = 0.5 # length of the shank
 
+    # unpack the base position
+    p_base_W = np.array([y_base_W[0], y_base_W[1]]).reshape(2, 1)
+    theta_des = y_base_W[2]
+    R = np.array([[np.cos(theta_des), -np.sin(theta_des)],
+                  [np.sin(theta_des),  np.cos(theta_des)]])
+    
+    # compute the position of the feet in base frame
+    p_left_W = np.array([y_left_W[0], y_left_W[1]]).reshape(2, 1)
+    p_right_W = np.array([y_right_W[0], y_right_W[1]]).reshape(2, 1)
+    p_left_B = (R.transpose() @ (p_left_W - p_base_W)).reshape(2, 1)
+    p_right_B = (R.transpose() @ (p_right_W - p_base_W)).reshape(2, 1)
+
     # unpack the desired position
-    x_L = p_left[0]
-    z_L = p_left[1]
-    x_R = p_right[0]
-    z_R = p_right[1]
+    x_L = p_left_B[0][0]
+    z_L = p_left_B[1][0]
+    x_R = p_right_B[0][0]
+    z_R = p_right_B[1][0]
 
     # compute the angles
     c_L = (x_L**2 + z_L**2 - l1**2 - l2**2) / (2 * l1 * l2)
@@ -118,13 +131,15 @@ def compute_inverse_kinematics(p_left, p_right):
     s_R = -np.sqrt(1 - c_R**2)
     q_KR = np.arctan2(s_R, c_R)
 
-    q_HL = np.arctan2(z_L, x_L) - np.arctan2(l2 * np.sin(q_KL), l1 + l2 * np.cos(q_KL)) + np.pi 
-    q_HR = np.arctan2(z_R, x_R) - np.arctan2(l2 * np.sin(q_KR), l1 + l2 * np.cos(q_KR)) + np.pi
+    q_HL = np.arctan2(z_L, x_L) - np.arctan2(l2 * np.sin(q_KL), l1 + l2 * np.cos(q_KL)) + np.pi/2 
+    q_HR = np.arctan2(z_R, x_R) - np.arctan2(l2 * np.sin(q_KR), l1 + l2 * np.cos(q_KR)) + np.pi/2
 
-    # pack the angles
-    q = np.array([q_HL, q_KL, q_HR, q_KR])
+    # pack the positions
+    q_base = np.array([p_base_W[0], p_base_W[1], theta_des]).reshape(3, 1)
+    q_left = np.array([q_HL, q_KL]).reshape(2, 1)
+    q_right = np.array([q_HR, q_KR]).reshape(2, 1)
 
-    return q
+    return q_base, q_left, q_right
 
 ####################################################################################
 # Torques functions
@@ -255,16 +270,23 @@ def run_simulation():
         data.ctrl[3] = tau[3]
 
         # compute the forward kinematics
-        p_left, p_right = compute_forward_kinematics(data)
+        y_base, y_left, y_right = compute_forward_kinematics(data)
 
         # compute the inverse kinematics
-        # q = compute_inverse_kinematics(p_left, p_right)
+        q_base, q_left, q_right = compute_inverse_kinematics(y_base, y_left, y_right)
 
         print("----------------------------------")
-        print("p_left: ", p_left.transpose())
-        print("p_right: ", p_right.transpose())
-        # print("act: ", data.qpos[3:7])
-        # print("ik: ", q)
+        # print("y_base: ", y_base.transpose())
+        # print("y_left: ", y_left.transpose())
+        # print("y_right: ", y_right.transpose())
+        
+        # print("act: ", data.qpos[0:3])
+        # print("ik_base: ", q_base.transpose())
+
+        print("act: ", data.qpos[3:7])
+        print("ik_base: ", q_left.transpose())
+        print("ik_base: ", q_right.transpose())
+        
         # print("(x, z, theta): ", data.qpos[0:3])
 
         # Update the camera to track the center of mass
