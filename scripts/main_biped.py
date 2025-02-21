@@ -57,9 +57,68 @@ def compute_desired_joint_state(sim_time, data):
     q_des[1] += -0.4 - 0.1 * np.sin(w * sim_time)  # Left hip
     q_des[2] += -0.0 + 0.1* np.sin(w * sim_time)  # Right hip
     q_des[3] += -0.2 + 0.1 * np.sin(w * sim_time)  # Right hip
-    
+
     return q_des, qd_des
 
+
+####################################################################################
+# Kinematics functions
+####################################################################################
+
+# compute the forward kinematics
+def compute_forward_kinematics(data):
+
+    # lengths of the legs
+    l1 = 0.25 # length of the thigh
+    l2 = 0.25 # length of the shank
+
+    # unpack the joint angles
+    q_HL = data.qpos[3]
+    q_KL = data.qpos[4]
+    q_HR = data.qpos[5]
+    q_KR = data.qpos[6]
+
+    # compute the positions of the feet
+    p_left = np.array([l1 * np.sin(q_HL) + l2 * np.sin(q_HL + q_KL),
+                      -l1 * np.cos(q_HL) - l2 * np.cos(q_HL + q_KL)])
+    p_right = np.array([l1 * np.sin(q_HR) + l2 * np.sin(q_HR + q_KR),
+                        -l1 * np.cos(q_HR) - l2 * np.cos(q_HR + q_KR)])
+    
+    return p_left, p_right
+
+# compute inver kineamtics
+def compute_inverse_kinematics(p_left, p_right):
+
+    # lengths of the legs
+    l1 = 0.25 # length of the thigh
+    l2 = 0.25 # length of the shank
+
+    # unpack the desired position
+    x_L = p_left[0]
+    z_L = p_left[1]
+    x_R = p_right[0]
+    z_R = p_right[1]
+
+    # compute the angles
+    c_L = (x_L**2 + z_L**2 - l1**2 - l2**2) / (2 * l1 * l2)
+    s_L = -np.sqrt(1 - c_L**2)
+    q_KL = np.arctan2(s_L, c_L)
+
+    c_R = (x_R**2 + z_R**2 - l1**2 - l2**2) / (2 * l1 * l2)
+    s_R = -np.sqrt(1 - c_R**2)
+    q_KR = np.arctan2(s_R, c_R)
+
+    q_HL = np.arctan2(z_L, x_L) - np.arctan2(l2 * np.sin(q_KL), l1 + l2 * np.cos(q_KL)) + np.pi 
+    q_HR = np.arctan2(z_R, x_R) - np.arctan2(l2 * np.sin(q_KR), l1 + l2 * np.cos(q_KR)) + np.pi
+
+    # pack the angles
+    q = np.array([q_HL, q_KL, q_HR, q_KR])
+
+    return q
+
+####################################################################################
+# Torques functions
+####################################################################################
 
 # Function to compute torques based on desired position and velocity
 def compute_torques(q_des, qd_des, data):
@@ -165,7 +224,7 @@ def run_simulation():
 
     # max sim time
     sim_time = 0.0
-    max_sim_time = 10.0
+    max_sim_time = 150.0
 
     # Main simulation loop
     while (not glfw.window_should_close(window)) and (sim_time < max_sim_time):
@@ -184,6 +243,20 @@ def run_simulation():
         data.ctrl[1] = tau[1]
         data.ctrl[2] = tau[2]
         data.ctrl[3] = tau[3]
+
+        # print the position of "base_sphere"
+        # print("base_sphere: ", data.xpos[model.body_name2id("base_sphere")])
+
+        # compute the forward kinematics
+        p_left, p_right = compute_forward_kinematics(data)
+
+        # compute the inverse kinematics
+        q = compute_inverse_kinematics(p_left, p_right)
+
+        print("----------------------------------")
+        # print("act: ", data.qpos[3:7])
+        # print("ik: ", q)
+        print("(x, z, theta): ", data.qpos[0:3])
 
         # Update the camera to track the center of mass
         update_camera_to_com(model, data, cam)

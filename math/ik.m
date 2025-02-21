@@ -164,15 +164,15 @@ function q = inv_kinematics(p_foot_des, params)
     
     % Extract desired foot position
     x = p_foot_des(1);
-    y = p_foot_des(2);
+    z = p_foot_des(2);
 
     % Compute q2 using the law of cosines
-    c2 = (x^2 + y^2 - l1^2 - l2^2) / (2 * l1 * l2);
-    s2 = sqrt(1 - c2^2);  % Choose positive for elbow-up, negative for elbow-down
-    q2 = -atan2(s2, c2);
+    c2 = (x^2 + z^2 - l1^2 - l2^2) / (2 * l1 * l2);
+    s2 = -sqrt(1 - c2^2);  % Choose positive for knee-up, negative for knee-down
+    q2 = atan2(s2, c2);
 
     % Compute q1 using the law of sines
-    gamma = atan2(y, x);
+    gamma = atan2(z, x);
     beta = atan2(l2 * sin(q2), l1 + l2 * cos(q2));
     q1 = gamma - beta + pi/2;
 
