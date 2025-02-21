@@ -65,12 +65,18 @@ def compute_desired_joint_state(sim_time, data):
 # Kinematics functions
 ####################################################################################
 
-# compute the forward kinematics
+# compute the forward kinematics in WORLD Frame
 def compute_forward_kinematics(data):
 
     # lengths of the legs
-    l1 = 0.25 # length of the thigh
-    l2 = 0.25 # length of the shank
+    l1 = 0.5 # length of the thigh
+    l2 = 0.5 # length of the shank
+
+    # unpack the base position
+    p_base_W = np.array([data.qpos[0], data.qpos[1]]).reshape(2, 1)
+    theta = data.qpos[2]
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta),  np.cos(theta)]])
 
     # unpack the joint angles
     q_HL = data.qpos[3]
@@ -78,20 +84,24 @@ def compute_forward_kinematics(data):
     q_HR = data.qpos[5]
     q_KR = data.qpos[6]
 
-    # compute the positions of the feet
-    p_left = np.array([l1 * np.sin(q_HL) + l2 * np.sin(q_HL + q_KL),
-                      -l1 * np.cos(q_HL) - l2 * np.cos(q_HL + q_KL)])
-    p_right = np.array([l1 * np.sin(q_HR) + l2 * np.sin(q_HR + q_KR),
-                        -l1 * np.cos(q_HR) - l2 * np.cos(q_HR + q_KR)])
+    # compute the positions of the feet relative to the base frame
+    p_left_B = np.array([l1 * np.sin(q_HL) + l2 * np.sin(q_HL + q_KL),
+                        -l1 * np.cos(q_HL) - l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
+    p_right_B = np.array([l1 * np.sin(q_HR) + l2 * np.sin(q_HR + q_KR),
+                         -l1 * np.cos(q_HR) - l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
     
-    return p_left, p_right
+    # compute the positions of the feet in WORLD frame
+    p_left_W = p_base_W + R @ p_left_B
+    p_right_W = p_base_W + R @ p_right_B
+    
+    return p_left_W, p_right_W
 
 # compute inver kineamtics
 def compute_inverse_kinematics(p_left, p_right):
 
     # lengths of the legs
-    l1 = 0.25 # length of the thigh
-    l2 = 0.25 # length of the shank
+    l1 = 0.5 # length of the thigh
+    l2 = 0.5 # length of the shank
 
     # unpack the desired position
     x_L = p_left[0]
@@ -209,7 +219,7 @@ def run_simulation():
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
     # Set the initial configuration of the robot   
-    qpos = np.array([0.0, 1.0,                # position x and z 
+    qpos = np.array([0.0, 1.1,                # position x and z 
                      0.0,                     # theta body
                      0.5, -0.2, -0.3, -0.2])  # left thigh, left knee, right thigh, right knee
     qvel = np.array([0.0, 0.0, 
@@ -244,19 +254,18 @@ def run_simulation():
         data.ctrl[2] = tau[2]
         data.ctrl[3] = tau[3]
 
-        # print the position of "base_sphere"
-        # print("base_sphere: ", data.xpos[model.body_name2id("base_sphere")])
-
         # compute the forward kinematics
         p_left, p_right = compute_forward_kinematics(data)
 
         # compute the inverse kinematics
-        q = compute_inverse_kinematics(p_left, p_right)
+        # q = compute_inverse_kinematics(p_left, p_right)
 
         print("----------------------------------")
+        print("p_left: ", p_left.transpose())
+        print("p_right: ", p_right.transpose())
         # print("act: ", data.qpos[3:7])
         # print("ik: ", q)
-        print("(x, z, theta): ", data.qpos[0:3])
+        # print("(x, z, theta): ", data.qpos[0:3])
 
         # Update the camera to track the center of mass
         update_camera_to_com(model, data, cam)
