@@ -25,8 +25,8 @@ class BipedSimulation:
 
         # initial state
         qpos = np.array([0.0, 1.1,                # position x and z 
-                         0.0,                     # theta body
-                         0.5, -0.2, -0.3, -0.2])  # left thigh, left knee, right thigh, right knee
+                         -0.0,                     # theta body
+                         0.0, -0.0, -0.0, -0.0])  # left thigh, left knee, right thigh, right knee
         qvel = np.array([0.0, 0.0, 
                          0.0, 
                          0.0, 0.0,  0.0, 0.0])  
@@ -59,15 +59,15 @@ class BipedSimulation:
         self.v_rom_des = 0
 
         # phasing variables
-        self.T_SSP = 0.36
+        self.T_SSP = 0.26
         self.T_phase = 0.0
         self.num_steps = 0
         self.stance_foot = None
 
         # desired height
-        self.theta_des = 0.0  # desired torso angle
-        self.z_0 = 1.0        # LIP constant height
-        self.z_apex = 0.2     # foot apex height
+        self.theta_des = -0.1  # desired torso angle
+        self.z_0 = 0.9        # LIP constant height
+        self.z_apex = 0.15     # foot apex height
 
         # foot position variables
         self.p_stance_prev = None # previous stance foot position
@@ -76,13 +76,13 @@ class BipedSimulation:
         self.u = None             # foot placement w.r.t to stance foot
 
         # Raibert gains
-        self.kp_raibert = 1.0
-        self.kd_raibert = 0.1
+        self.kp_raibert = -1.1
+        self.kd_raibert = -0.4
 
         # low level joint gains
-        self.kp_H = 100
+        self.kp_H = 200
         self.kd_H = 10
-        self.kp_K = 150
+        self.kp_K = 250
         self.kd_K = 10
 
     ############################################### ROM ######################################
@@ -106,7 +106,7 @@ class BipedSimulation:
     def update_stance_foot(self):
 
         # compute the forward kinematics
-        y_base_W, y_left_W, y_right_W = self.compute_forward_kinematics()
+        _, y_left_W, y_right_W = self.compute_forward_kinematics()
 
         # based on the phase variable, assign stance foot position
         if self.stance_foot == "L":
@@ -140,7 +140,7 @@ class BipedSimulation:
 
         # update teh COM state
         self.p_com = np.array([com[0], com[2]]).reshape(2, 1)
-        self.v_com = np.array([self.data.qvel[0], self.data.qvel[2]]).reshape(2, 1)
+        self.v_com = np.array([self.data.qvel[0], self.data.qvel[1]]).reshape(2, 1)
 
     # compute hip lateral position (HLIP) state
     def update_hlip_state(self):
@@ -157,10 +157,12 @@ class BipedSimulation:
         self.p_rom = p[0]
         self.v_rom = self.v_com[0][0]
 
-    # compute the foot placement
+    # compute the foot placement based on Raibert
     def compute_foot_placement(self):
 
-        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom)
+        # TODO: computing this the wrong way I think 
+        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom) 
+        
 
     ############################################### KINEMATICS ######################################
 
@@ -201,24 +203,26 @@ class BipedSimulation:
         
         # compute the desired base outputs
         y_base_W, _, _ = self.compute_forward_kinematics()
+        y_base_W[1] = self.z_0 + self.z_foot_offset
+        y_base_W[2] = self.theta_des
+        y_base_des_W = y_base_W
         
         # define the desired foot outputs
         p_swing_W = self.compute_swing_foot_pos()
         p_stance_W = self.p_stance
 
-        # pack the outputs
-        y_base_des_W = y_base_W
-        y_left_des_W = p_stance_W
-        y_right_des_W = p_swing_W
+        # compute the desired foot outputs
+        if self.stance_foot == "L":
+            y_left_des_W = p_stance_W
+            y_right_des_W = p_swing_W
+        elif self.stance_foot == "R":
+            y_left_des_W = p_swing_W
+            y_right_des_W = p_stance_W
 
         return y_base_des_W, y_left_des_W, y_right_des_W
 
     # compute the forward kinematics in WORLD Frame
     def compute_forward_kinematics(self):
-
-        # lengths of the legs
-        self.l1 = 0.5 # length of the thigh
-        self.l2 = 0.5 # length of the shank
 
         # unpack the base position
         p_base_W = np.array([self.data.qpos[0], self.data.qpos[1]]).reshape(2, 1)
@@ -248,16 +252,12 @@ class BipedSimulation:
     # compute inverse kineamtics given feet position in world frame
     def compute_inverse_kinematics(self, y_base_W, y_left_W, y_right_W):
 
-        # lengths of the legs
-        self.l1 = 0.5 # length of the thigh
-        self.l2 = 0.5 # length of the shank
-
         # unpack the base position
         p_base_W = np.array([y_base_W[0], y_base_W[1]]).reshape(2, 1)
         theta_des = y_base_W[2]
         R = np.array([[np.cos(theta_des), -np.sin(theta_des)],
                       [np.sin(theta_des),  np.cos(theta_des)]])
-        
+
         # compute the position of the feet in base frame
         p_left_W = np.array([y_left_W[0], y_left_W[1]]).reshape(2, 1)
         p_right_W = np.array([y_right_W[0], y_right_W[1]]).reshape(2, 1)
@@ -292,7 +292,7 @@ class BipedSimulation:
     ############################################### LOW LEVEL ######################################
 
     # Function to compute torques based on desired position and velocity
-    def compute_torques(self,q_des, qd_des):
+    def compute_torques(self, q_des, qd_des):
 
         # unpack the current joint state
         q_HL = self.data.qpos[3]
@@ -383,6 +383,8 @@ class BipedSimulation:
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
 
+            # print("*" * 40)
+
             # update the simulation time
             self.sim_time = self.data.time
 
@@ -405,18 +407,28 @@ class BipedSimulation:
             # compute desired outputs
             y_base_des, y_left_des, y_right_des = self.update_output_des()
 
-            # desired joint state TODO: will replace this with outputs
+            # compute the inverse kinematics
+            _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+
+            # fixed joint state
             q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
             qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
 
             # compute torques
+            q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
+            qd_des = np.array([0.0, 0.0, 0.0, 0.0])
             tau = self.compute_torques(q_des, qd_des)
 
             # apply the torques
-            self.data.ctrl[0] = tau[0]
-            self.data.ctrl[1] = tau[1]
-            self.data.ctrl[2] = tau[2]
-            self.data.ctrl[3] = tau[3]
+            self.data.ctrl[0] = tau[0][0]
+            self.data.ctrl[1] = tau[1][0]
+            self.data.ctrl[2] = tau[2][0]
+            self.data.ctrl[3] = tau[3][0]
+
+            # force the state
+            # self.data.qpos[0] = 0.0
+            # self.data.qpos[1] = 1.0
+            # self.data.qpos[2] = self.theta_des
 
             # update the camera to track the COM
             self.update_camera_to_com(cam)
