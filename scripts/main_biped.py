@@ -1,9 +1,12 @@
 
-import mujoco
+# standard library
 import numpy as np
-import glfw
+import time
 import os
 
+# mujoco stuff
+import mujoco
+import glfw
 
 ####################################################################################
 # Biped Simulation
@@ -33,21 +36,61 @@ class BipedSimulation:
         # sim parameters
         self.sim_time = 0.0
         self.max_sim_time = 15.0
+        self.dt_sim = self.model.opt.timestep
+        self.hz_render = 40
 
         # center of mass state
         self.p_com = None
         self.v_com = None
 
+        # ROM state
+        self.p_rom = None
+        self.v_rom = None
+
         # phasing variables
+        self.T_SSP = 0.35
+        self.T_phase = 0.0
+        self.num_steps = 0
+        self.stance_foot = None
+
+        # desired height
+        self.theta_des = 0.0  # desired torso angle
+        self.z_0 = 1.0        # LIP constant height
+        self.z_apex = 0.2     # foot apex height
+
+        # output variables
+        self.p_stance = None
+        self.p_swing = None
 
         # low level joint gains
         self.kp_H = 100
         self.kd_H = 10
         self.kp_K = 150
         self.kd_K = 10
-        
 
-    ############################################### KINEMATICS ######################################
+    ############################################### ROM ######################################
+
+    # update the phasing variable
+    def update_phase(self):
+
+        # compute the number of steps taken so far
+        self.num_steps = int(self.sim_time / self.T_SSP)
+
+        # update the phase variable
+        self.T_phase = self.sim_time - self.num_steps * self.T_SSP
+
+        # update the stance foot
+        if self.num_steps % 2 == 0:
+            self.stance_foot = "L"
+        else:
+            self.stance_foot = "R"
+
+    # update which foot is swing and stance
+    def update_foot_role(self):
+
+        # TODO: based on the phase variable, decide which foot is swing and stance
+
+        pass
 
     # compute center of mass (COM) state
     def update_com_state(self):
@@ -74,6 +117,57 @@ class BipedSimulation:
         # update teh COM state
         self.p_com = np.array([com[0], com[2]]).reshape(2, 1)
         self.v_com = np.array([self.data.qvel[0], self.data.qvel[2]]).reshape(2, 1)
+
+    # compute hip lateral position (HLIP) state
+    def update_hlip_state(self):
+
+        # compute the forward kinematics
+        _, y_left_W, y_right_W = self.compute_forward_kinematics()
+
+        # compute the HLIP position
+        if self.stance_foot == "L":
+            p = self.p_com[0] - y_left_W[0]
+        elif self.stance_foot == "R":
+            p = self.p_com[0] - y_right_W[0]
+
+        self.p_rom = p[0]
+        self.v_rom = self.v_com[0][0]
+
+    # compute the foot placement
+    def compute_foot_placement(self):
+
+        # Raibert gains
+        kp = 1.0
+        kd = 0.1
+
+        # compute the foot placement
+        p_rom_des = 0
+        v_rom_des = 0
+        u = kp * (p_rom_des - self.p_rom) + kd * (v_rom_des - self.v_rom)
+
+        return u
+
+    ############################################### KINEMATICS ######################################
+
+    # compute bezier curve value
+    def compute_bezier(self, u):
+
+        # TODO: compute the bezier curve value based on stance and required foot step
+
+        pass
+
+    # update the desired outputs
+    def update_output_des(self):
+
+        # update the desired outputs
+        
+        # compute the desired foot placement
+        u = self.compute_foot_placement()
+
+
+        # TODO: defined the desired outputs
+
+        pass
 
     # compute the forward kinematics in WORLD Frame
     def compute_forward_kinematics(self):
@@ -188,7 +282,7 @@ class BipedSimulation:
         tau = [tau_HL, tau_KL, tau_HR, tau_KR]
         
         return tau
-
+    
     ############################################### AUX FUNC ######################################
 
     # Function to update the camera position to track the center of mass (CoM)
@@ -236,30 +330,51 @@ class BipedSimulation:
         context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         # Initialize a counter for rendering frames
-        step_counter = 0 # Frame counter
-        frame_skip = 15  # Only render every so number of steps
+        frame_skip = round(1 / (self.hz_render * self.dt_sim))  # Only render every so number of steps
+        step_counter = 0    # Frame counter
+        print("Frame skip: ", frame_skip)
 
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
 
+            # update the simulation time
+            self.sim_time = self.data.time
+
+            # update the phasing variable
+            self.update_phase()
+
             # update the COM state
             self.update_com_state()
-            self.update_camera_to_com(cam)
+            self.update_hlip_state()
 
-            # desired joint state
+            # compute desired outputs
+            self.update_output_des()
+
+            # desired joint state TODO: will replace this with outputs
             q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
             qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
 
             # compute torques
             tau = self.compute_torques(q_des, qd_des)
 
-            print(tau)
-
             # apply the torques
             self.data.ctrl[0] = tau[0]
             self.data.ctrl[1] = tau[1]
             self.data.ctrl[2] = tau[2]
             self.data.ctrl[3] = tau[3]
+
+            # update the camera to track the COM
+            self.update_camera_to_com(cam)
+
+             # Log thesim data
+            with open(time_file_path, 'a') as f:
+                f.write(f"{self.sim_time}\n")
+            with open(pos_file_path, 'a') as f:
+                f.write(f"{self.data.qpos[0]},{self.data.qpos[1]},{self.data.qpos[2]},{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+            with open(vel_file_path, 'a') as f:
+                f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
+            with open(tau_file_path, 'a') as f:
+                f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)
