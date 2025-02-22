@@ -26,7 +26,7 @@
 
     <!-- Default properties -->
 	<default>
-		<geom conaffinity="0" contype="0" density="100" friction="1.0 1.0 1.0"/>
+		<geom conaffinity="0" contype="0" density="100" friction="0.8 0.8 0.8"/>
 		<default class="visual">
 			<geom conaffinity="0" contype="0"/>
 		</default>
