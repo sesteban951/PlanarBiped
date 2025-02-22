@@ -1,12 +1,14 @@
 
 # standard library
 import numpy as np
-import time
 import os
 
 # mujoco stuff
 import mujoco
 import glfw
+
+# bezier stuff
+import bezier
 
 ####################################################################################
 # Biped Simulation
@@ -37,7 +39,12 @@ class BipedSimulation:
         self.sim_time = 0.0
         self.max_sim_time = 15.0
         self.dt_sim = self.model.opt.timestep
-        self.hz_render = 40
+        self.hz_render = 50
+
+        # model parameters
+        self.z_foot_offset = 0.075 # (foot is round)
+        self.l1 = 0.5 # length of the thigh
+        self.l2 = 0.5 # length of the shank
 
         # center of mass state
         self.p_com = None
@@ -47,8 +54,12 @@ class BipedSimulation:
         self.p_rom = None
         self.v_rom = None
 
+        # desired COM state
+        self.p_rom_des = 0
+        self.v_rom_des = 0
+
         # phasing variables
-        self.T_SSP = 0.35
+        self.T_SSP = 0.36
         self.T_phase = 0.0
         self.num_steps = 0
         self.stance_foot = None
@@ -58,9 +69,15 @@ class BipedSimulation:
         self.z_0 = 1.0        # LIP constant height
         self.z_apex = 0.2     # foot apex height
 
-        # output variables
-        self.p_stance = None
-        self.p_swing = None
+        # foot position variables
+        self.p_stance_prev = None # previous stance foot position
+        self.p_stance = None      # current stance foot position
+        self.p_swing = None       # current swing foot position
+        self.u = None             # foot placement w.r.t to stance foot
+
+        # Raibert gains
+        self.kp_raibert = 1.0
+        self.kd_raibert = 0.1
 
         # low level joint gains
         self.kp_H = 100
@@ -86,11 +103,18 @@ class BipedSimulation:
             self.stance_foot = "R"
 
     # update which foot is swing and stance
-    def update_foot_role(self):
+    def update_stance_foot(self):
 
-        # TODO: based on the phase variable, decide which foot is swing and stance
+        # compute the forward kinematics
+        y_base_W, y_left_W, y_right_W = self.compute_forward_kinematics()
 
-        pass
+        # based on the phase variable, assign stance foot position
+        if self.stance_foot == "L":
+            self.p_stance_prev = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
+            self.p_stance = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
+        elif self.stance_foot == "R":
+            self.p_stance_prev = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
+            self.p_stance = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
 
     # compute center of mass (COM) state
     def update_com_state(self):
@@ -136,51 +160,71 @@ class BipedSimulation:
     # compute the foot placement
     def compute_foot_placement(self):
 
-        # Raibert gains
-        kp = 1.0
-        kd = 0.1
-
-        # compute the foot placement
-        p_rom_des = 0
-        v_rom_des = 0
-        u = kp * (p_rom_des - self.p_rom) + kd * (v_rom_des - self.v_rom)
-
-        return u
+        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom)
 
     ############################################### KINEMATICS ######################################
 
-    # compute bezier curve value
-    def compute_bezier(self, u):
+    # compute swing foot based on foot placement and bezier curve
+    def compute_swing_foot_pos(self):
 
-        # TODO: compute the bezier curve value based on stance and required foot step
+        # compute the foot placement
+        self.compute_foot_placement()
 
-        pass
+        # initial and end points
+        x0 = self.p_stance_prev[0][0]
+        xm = (self.p_stance_prev[0][0] + self.u) /2
+        xf = self.p_stance_prev[0][0] + self.u
+        
+        z0 = self.z_foot_offset
+        zm = self.z_apex * (16/5) + self.z_foot_offset
+        zf = self.z_foot_offset
+
+        # bezier curve points
+        x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
+        z_pts = np.array([z0, z0, z0, zm, zf, zf, zf]) # z Bezier points
+        P = np.array([x_pts, z_pts])
+
+        # want to compute this at normalized time
+        t = self.T_phase / self.T_SSP
+
+        # build the bezier curve
+        nodes = np.asfortranarray(P)
+        curve = bezier.Curve(nodes, degree=(P.shape[1]-1))
+        
+        # evaulate the bezier curve at tiem t
+        p_swing = curve.evaluate(t)
+        
+        return p_swing
 
     # update the desired outputs
     def update_output_des(self):
-
-        # update the desired outputs
         
-        # compute the desired foot placement
-        u = self.compute_foot_placement()
+        # compute the desired base outputs
+        y_base_W, _, _ = self.compute_forward_kinematics()
+        
+        # define the desired foot outputs
+        p_swing_W = self.compute_swing_foot_pos()
+        p_stance_W = self.p_stance
 
+        # pack the outputs
+        y_base_des_W = y_base_W
+        y_left_des_W = p_stance_W
+        y_right_des_W = p_swing_W
 
-        # TODO: defined the desired outputs
-
-        pass
+        return y_base_des_W, y_left_des_W, y_right_des_W
 
     # compute the forward kinematics in WORLD Frame
     def compute_forward_kinematics(self):
 
         # lengths of the legs
-        l1 = 0.5 # length of the thigh
-        l2 = 0.5 # length of the shank
+        self.l1 = 0.5 # length of the thigh
+        self.l2 = 0.5 # length of the shank
 
         # unpack the base position
         p_base_W = np.array([self.data.qpos[0], self.data.qpos[1]]).reshape(2, 1)
         theta_W = self.data.qpos[2]
         R = np.array([[np.cos(theta_W), -np.sin(theta_W)],
-                    [np.sin(theta_W),  np.cos(theta_W)]])
+                      [np.sin(theta_W),  np.cos(theta_W)]])
 
         # unpack the joint angles
         q_HL = self.data.qpos[3]
@@ -189,10 +233,10 @@ class BipedSimulation:
         q_KR = self.data.qpos[6]
 
         # compute the positions of the feet relative to the base frame
-        p_left_B = np.array([l1 * np.sin(q_HL) + l2 * np.sin(q_HL + q_KL),
-                            -l1 * np.cos(q_HL) - l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
-        p_right_B = np.array([l1 * np.sin(q_HR) + l2 * np.sin(q_HR + q_KR),
-                            -l1 * np.cos(q_HR) - l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
+        p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
+                            -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
+        p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
+                             -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
         
         # compute the outputs
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
@@ -205,14 +249,14 @@ class BipedSimulation:
     def compute_inverse_kinematics(self, y_base_W, y_left_W, y_right_W):
 
         # lengths of the legs
-        l1 = 0.5 # length of the thigh
-        l2 = 0.5 # length of the shank
+        self.l1 = 0.5 # length of the thigh
+        self.l2 = 0.5 # length of the shank
 
         # unpack the base position
         p_base_W = np.array([y_base_W[0], y_base_W[1]]).reshape(2, 1)
         theta_des = y_base_W[2]
         R = np.array([[np.cos(theta_des), -np.sin(theta_des)],
-                    [np.sin(theta_des),  np.cos(theta_des)]])
+                      [np.sin(theta_des),  np.cos(theta_des)]])
         
         # compute the position of the feet in base frame
         p_left_W = np.array([y_left_W[0], y_left_W[1]]).reshape(2, 1)
@@ -227,16 +271,16 @@ class BipedSimulation:
         z_R = p_right_B[1][0]
 
         # compute the angles
-        c_L = (x_L**2 + z_L**2 - l1**2 - l2**2) / (2 * l1 * l2)
+        c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
         s_L = -np.sqrt(1 - c_L**2)
         q_KL = np.arctan2(s_L, c_L)
 
-        c_R = (x_R**2 + z_R**2 - l1**2 - l2**2) / (2 * l1 * l2)
+        c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
         s_R = -np.sqrt(1 - c_R**2)
         q_KR = np.arctan2(s_R, c_R)
 
-        q_HL = np.arctan2(z_L, x_L) - np.arctan2(l2 * np.sin(q_KL), l1 + l2 * np.cos(q_KL)) + np.pi/2 
-        q_HR = np.arctan2(z_R, x_R) - np.arctan2(l2 * np.sin(q_KR), l1 + l2 * np.cos(q_KR)) + np.pi/2
+        q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
+        q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
 
         # pack the positions
         q_base = np.array([p_base_W[0], p_base_W[1], theta_des]).reshape(3, 1)
@@ -332,7 +376,9 @@ class BipedSimulation:
         # Initialize a counter for rendering frames
         frame_skip = round(1 / (self.hz_render * self.dt_sim))  # Only render every so number of steps
         step_counter = 0    # Frame counter
-        print("Frame skip: ", frame_skip)
+
+        # to keep track of phase
+        t_phase_reset = 0.0
 
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
@@ -340,15 +386,24 @@ class BipedSimulation:
             # update the simulation time
             self.sim_time = self.data.time
 
-            # update the phasing variable
+            # update phasing variables
             self.update_phase()
+
+            # update the phasing variable i phase completed
+            if (self.sim_time - t_phase_reset >= self.T_SSP) or (self.sim_time == 0.0):
+                
+                # update the stance foot
+                self.update_stance_foot()
+
+                # update the stance foot
+                t_phase_reset = self.sim_time
 
             # update the COM state
             self.update_com_state()
             self.update_hlip_state()
 
             # compute desired outputs
-            self.update_output_des()
+            y_base_des, y_left_des, y_right_des = self.update_output_des()
 
             # desired joint state TODO: will replace this with outputs
             q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
