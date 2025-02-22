@@ -32,9 +32,7 @@ def compute_com(model, data):
 
 
 # Function to update the camera position to track the center of mass (CoM)
-def update_camera_to_com(model, data, cam):
-    # Calculate the overall center of mass
-    com_pos = compute_com(model, data)
+def update_camera_to_com(com_pos, data, cam):
 
     # Set camera parameters to track the CoM
     cam.lookat[:] = com_pos[:3]  # Make the camera look at the CoM
@@ -51,12 +49,12 @@ def compute_desired_joint_state(sim_time, data):
     qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
 
     # rocking out motion
-    f = 0.5
-    w = 2 * np.pi * f
-    q_des[0] +=  0.5 * np.sin(w * sim_time)  # Left hip
-    q_des[1] += -0.4 - 0.1 * np.sin(w * sim_time)  # Left hip
-    q_des[2] += -0.0 + 0.1* np.sin(w * sim_time)  # Right hip
-    q_des[3] += -0.2 + 0.1 * np.sin(w * sim_time)  # Right hip
+    # f = 0.5
+    # w = 2 * np.pi * f
+    # q_des[0] +=  0.5 * np.sin(w * sim_time)  # Left hip
+    # q_des[1] += -0.4 - 0.1 * np.sin(w * sim_time)  # Left hip
+    # q_des[2] += -0.0 + 0.1* np.sin(w * sim_time)  # Right hip
+    # q_des[3] += -0.2 + 0.1 * np.sin(w * sim_time)  # Right hip
 
     return q_des, qd_des
 
@@ -142,6 +140,20 @@ def compute_inverse_kinematics(y_base_W, y_left_W, y_right_W):
     return q_base, q_left, q_right
 
 ####################################################################################
+# Foot placement functions
+####################################################################################
+
+# compute the HLIP state
+def compute_ROM_state(model, data):
+    
+    # compute the center of mass
+    com_pos = compute_com(model, data)
+    com_pos = np.array([com_pos[0], com_pos[2]]).reshape(2, 1)
+
+
+    return 0
+
+####################################################################################
 # Torques functions
 ####################################################################################
 
@@ -190,7 +202,7 @@ def compute_torques(q_des, qd_des, data):
     
 
 ####################################################################################
-# Simulaiton
+# Main Simulaiton Function
 ####################################################################################
 
 # Simulation loop
@@ -233,6 +245,10 @@ def run_simulation():
     scene = mujoco.MjvScene(model, maxgeom=10000)
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
+    # Initialize a counter for rendering frames
+    step_counter = 0 # Frame counter
+    frame_skip = 15  # Only render every so number of steps
+
     # Set the initial configuration of the robot   
     qpos = np.array([0.0, 1.1,                # position x and z 
                      0.0,                     # theta body
@@ -243,19 +259,24 @@ def run_simulation():
     data.qpos[:] = qpos
     data.qvel[:] = qvel
 
-    # Initialize a counter for rendering frames
-    step_counter = 0 # Frame counter
-    frame_skip = 15  # Only render every so number of steps
-
     # max sim time
     sim_time = 0.0
-    max_sim_time = 150.0
+    max_sim_time = 15.0
 
     # Main simulation loop
     while (not glfw.window_should_close(window)) and (sim_time < max_sim_time):
 
+        # Calculate the overall center of mass
+        com_pos = compute_com(model, data)
+
+        # Update the camera to track the center of mass
+        update_camera_to_com(com_pos, data, cam)
+
         # get the current mujoco time
         sim_time = data.time
+
+        # compute the rediced order model state
+        compute_ROM_state(model, data)
 
         # compute the desired joint positions and velocities
         q_des, qd_des = compute_desired_joint_state(sim_time, data)
@@ -276,6 +297,9 @@ def run_simulation():
         q_base, q_left, q_right = compute_inverse_kinematics(y_base, y_left, y_right)
 
         print("----------------------------------")
+
+        # print("com: ", com_pos.transpose())
+
         # print("y_base: ", y_base.transpose())
         # print("y_left: ", y_left.transpose())
         # print("y_right: ", y_right.transpose())
@@ -283,16 +307,11 @@ def run_simulation():
         # print("act: ", data.qpos[0:3])
         # print("ik_base: ", q_base.transpose())
 
-        print("act: ", data.qpos[3:7])
-        print("ik_base: ", q_left.transpose())
-        print("ik_base: ", q_right.transpose())
-        
-        # print("(x, z, theta): ", data.qpos[0:3])
+        # print("act: ", data.qpos[3:7])
+        # print("ik_base: ", q_left.transpose())
+        # print("ik_base: ", q_right.transpose())
 
-        # Update the camera to track the center of mass
-        update_camera_to_com(model, data, cam)
-
-        # write the current time and state to csv
+        # Log the state data
         with open(time_file_path, 'a') as f:
             f.write(f"{sim_time}\n")
         with open(pos_file_path, 'a') as f:

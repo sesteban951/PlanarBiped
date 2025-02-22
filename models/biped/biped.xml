@@ -26,7 +26,7 @@
 
     <!-- Default properties -->
 	<default>
-		<geom conaffinity="0" contype="0" density="100" friction="1.0 1.0 1.0"/>
+		<geom conaffinity="0" contype="0" density="100" friction="1.5 1.5 1.5"/>
 		<default class="visual">
 			<geom conaffinity="0" contype="0"/>
 		</default>
@@ -46,34 +46,32 @@
 			<!-- A light that tracks the CoM -->
 			<light pos="0 0 3" dir="0 0 -1" directional="false" mode="trackcom"/>
 
-			<!-- Floating Base -->
-			<joint name="root_x" type="slide" axis="1  0 0"/>
-			<joint name="root_z" type="slide" axis="0  0 1"/>
-			<joint name="root_y" type="hinge" axis="0 -1 0"/>
-
 			<!-- torso -->
-			<geom name="torso" type="capsule" size="0.075 0.4" pos="0 0 0.4" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+			<geom name="torso" type="capsule" size="0.075 0.4" pos="0 0 0.4" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1" density="500"/>
+			<joint name="root_x" type="slide" axis="1  0 0"/>  <!-- Floating Base  x pos-->
+			<joint name="root_z" type="slide" axis="0  0 1"/>  <!-- Floating Base  z pos-->
+			<joint name="root_y" type="hinge" axis="0 -1 0"/>  <!-- Floating Base  y angle-->
 
 				<!-- left thigh -->
 				<body name="thigh_left" pos="0 0.1 0.0">
-					<geom name="thigh_left" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+					<geom name="thigh_left" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1" density="100"/>
 					<joint name="hip_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 1.5"/>
 
 					<!-- left shin -->
 					<body name="shin_left" pos="0 0 -0.5">
-						<geom name="shin_left" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+						<geom name="shin_left" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"  density="100"/>
 						<joint name="knee_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 0"/>
 					</body>
 				</body>
 
 				<!-- right thigh -->
 				<body name="thigh_right" pos="0 -0.1 0.0">
-					<geom name="thigh_right" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+					<geom name="thigh_right" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"  density="100"/>
 					<joint name="hip_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 1.5"/>
 
 					<!-- right shin -->
 					<body name="shin_right" pos="0 0 -0.5">
-						<geom name="shin_right" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"/>
+						<geom name="shin_right" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 1.0" conaffinity="1" contype="1"  density="100"/>
 						<joint name="knee_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-1.5 0"/>
 					</body>
 				</body>
