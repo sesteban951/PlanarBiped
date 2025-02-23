@@ -35,6 +35,10 @@ class BipedSimulation:
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
 
+        # geomtry id
+        self.left_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "left_foot")
+        self.right_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "right_foot")
+        
         # sim parameters
         self.sim_time = 0.0
         self.max_sim_time = 10.0
@@ -75,9 +79,12 @@ class BipedSimulation:
         self.p_swing = None       # current swing foot position
         self.u = None             # foot placement w.r.t to stance foot
 
+        # current joint state solution
+        self.q_ik = np.zeros((4, 1))
+
         # Raibert gains
-        self.kp_raibert = 0.1
-        self.kd_raibert = -1.0
+        self.kp_raibert = -1.0
+        self.kd_raibert = 0.0
 
         # low level joint gains
         self.kp_H = 200
@@ -231,6 +238,7 @@ class BipedSimulation:
         theta_W = self.data.qpos[2]
         R = np.array([[np.cos(theta_W), -np.sin(theta_W)],
                       [np.sin(theta_W),  np.cos(theta_W)]])
+        y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
         # unpack the joint angles
         q_HL = self.data.qpos[3]
@@ -243,12 +251,21 @@ class BipedSimulation:
                             -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
         p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
                              -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
-        
-        # compute the outputs
-        y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
         y_left_W = p_base_W + R @ p_left_B
         y_right_W = p_base_W + R @ p_right_B
-        
+
+        print("--" * 40)
+
+        print(y_left_W.transpose())
+
+        # query the location of the feet
+        left_pos = self.data.geom_xpos[self.left_foot_id]
+        right_pos = self.data.geom_xpos[self.right_foot_id]
+        y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
+        y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
+
+        print(y_left_W.transpose())
+
         return y_base_W, y_left_W, y_right_W
 
     # compute inverse kineamtics given feet position in world frame
@@ -331,6 +348,19 @@ class BipedSimulation:
     
     ############################################### AUX FUNC ######################################
 
+    # # create sphere for visualization purposes
+    # def create_sphere_visual(self, pos, radius, rgba):
+        
+    #     # Initialize the geometry for the sphere       
+    #     mujoco.mjv_initGeom(self.scene.geoms[self.scene.ngeom], # Get the next available geom slot
+    #                         mujoco.mjtGeom.mjGEOM_SPHERE,       # Sphere geometry
+    #                         np.array([radius, 0, 0]),           # Size (radius, ignored, ignored)
+    #                         np.array(pos),           # Position (x, y, z)
+    #                         np.array([1, 0, 0, 0]),  # Identity quaternion (no rotation)
+    #                         rgba)                    # Color
+    
+    #     self.scene.ngeom += 1  # Increment the number of geoms in the scene
+
     # Function to update the camera position to track the center of mass (CoM)
     def update_camera_to_com(self, cam):
 
@@ -377,8 +407,8 @@ class BipedSimulation:
         opt = mujoco.MjvOption()
 
         # Set up scene and context for rendering
-        scene = mujoco.MjvScene(self.model, maxgeom=10000)
-        context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        self.scene = mujoco.MjvScene(self.model, maxgeom=10000)
+        self.context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         # Initialize a counter for rendering frames
         frame_skip = round(1 / (self.hz_render * self.dt_sim))  # Only render every so number of steps
@@ -432,11 +462,6 @@ class BipedSimulation:
             self.data.ctrl[2] = tau[2][0]
             self.data.ctrl[3] = tau[3][0]
 
-            # force the state
-            # self.data.qpos[0] = 0.0
-            # self.data.qpos[1] = 1.0
-            # self.data.qpos[2] = self.theta_des
-
             # update the camera to track the COM
             self.update_camera_to_com(cam)
 
@@ -466,8 +491,8 @@ class BipedSimulation:
                 viewport = mujoco.MjrRect(0, 0, width, height)
 
                 # Update scene for rendering
-                mujoco.mjv_updateScene(self.model, self.data, opt, None, cam, mujoco.mjtCatBit.mjCAT_ALL, scene)
-                mujoco.mjr_render(viewport, scene, context)
+                mujoco.mjv_updateScene(self.model, self.data, opt, None, cam, mujoco.mjtCatBit.mjCAT_ALL, self.scene)
+                mujoco.mjr_render(viewport, self.scene, self.context)
 
                 # Swap buffers and poll events for window
                 glfw.swap_buffers(window)
