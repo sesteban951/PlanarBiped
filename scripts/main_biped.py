@@ -37,7 +37,7 @@ class BipedSimulation:
 
         # sim parameters
         self.sim_time = 0.0
-        self.max_sim_time = 15.0
+        self.max_sim_time = 10.0
         self.dt_sim = self.model.opt.timestep
         self.hz_render = 50
 
@@ -59,14 +59,14 @@ class BipedSimulation:
         self.v_rom_des = 0
 
         # phasing variables
-        self.T_SSP = 0.26
+        self.T_SSP = 0.36
         self.T_phase = 0.0
         self.num_steps = 0
         self.stance_foot = None
 
         # desired height
-        self.theta_des = -0.1  # desired torso angle
-        self.z_0 = 0.9        # LIP constant height
+        self.theta_des = -0.3  # desired torso angle
+        self.z_0 = 0.88        # LIP constant height
         self.z_apex = 0.15     # foot apex height
 
         # foot position variables
@@ -76,8 +76,8 @@ class BipedSimulation:
         self.u = None             # foot placement w.r.t to stance foot
 
         # Raibert gains
-        self.kp_raibert = -1.1
-        self.kd_raibert = -0.4
+        self.kp_raibert = 0.1
+        self.kd_raibert = -1.0
 
         # low level joint gains
         self.kp_H = 200
@@ -161,7 +161,7 @@ class BipedSimulation:
     def compute_foot_placement(self):
 
         # TODO: computing this the wrong way I think 
-        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom) 
+        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom)
         
 
     ############################################### KINEMATICS ######################################
@@ -174,8 +174,8 @@ class BipedSimulation:
 
         # initial and end points
         x0 = self.p_stance_prev[0][0]
-        xm = (self.p_stance_prev[0][0] + self.u) /2
-        xf = self.p_stance_prev[0][0] + self.u
+        xm = (self.p_stance[0][0] + self.u) /2
+        xf = self.p_stance[0][0] + self.u
         
         z0 = self.z_foot_offset
         zm = self.z_apex * (16/5) + self.z_foot_offset
@@ -207,6 +207,8 @@ class BipedSimulation:
         y_base_W[2] = self.theta_des
         y_base_des_W = y_base_W
         
+        # TODO: probably dont use the base directly
+
         # define the desired foot outputs
         p_swing_W = self.compute_swing_foot_pos()
         p_stance_W = self.p_stance
@@ -349,12 +351,17 @@ class BipedSimulation:
         vel_file_path = "../data/vel.csv"
         tau_file_path = "../data/tau.csv"
 
+        q_des_path = "../data/q_des.csv"
+        q_act_path = "../data/q_act.csv"
+
         # remove the data files if they exist
         try:
             os.remove(time_file_path)
             os.remove(pos_file_path)
             os.remove(vel_file_path)
             os.remove(tau_file_path)
+            os.remove(q_des_path)
+            os.remove(q_act_path)
         except OSError:
             pass
     
@@ -433,7 +440,7 @@ class BipedSimulation:
             # update the camera to track the COM
             self.update_camera_to_com(cam)
 
-             # Log thesim data
+             # Log the sim data
             with open(time_file_path, 'a') as f:
                 f.write(f"{self.sim_time}\n")
             with open(pos_file_path, 'a') as f:
@@ -442,6 +449,11 @@ class BipedSimulation:
                 f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
             with open(tau_file_path, 'a') as f:
                 f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
+
+            with open(q_des_path, 'a') as f:
+                f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
+            with open(q_act_path, 'a') as f:
+                f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)
