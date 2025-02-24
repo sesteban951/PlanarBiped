@@ -5,13 +5,13 @@ clear all; clc; close all;
 
 % link lengths
 l0 = 0.40; % torso length
-l1 = 0.25; % thigh length
-l2 = 0.25; % shin length
+l1 = 0.5; % thigh length
+l2 = 0.5; % shin length
 params.l0 = l0;
 params.l1 = l1;
 params.l2 = l2;
 
-animation = 1;
+animation = 0;
 
 % syntehsize a joint trajectory for the robot
 t = 0: 0.025 : 7.0;
@@ -21,16 +21,28 @@ qdot_t = zeros(2, length(t));
 f = 0.5;
 w = 2 * pi * f;
 
+% hips
+hip_max = 1.58;
+hip_min = -1.58;
+A_hip = (hip_max - hip_min) / 2;
+hip_offset = (hip_max + hip_min) / 2;
+
+% knees
+knee_max = 1.58;
+knee_min = -1.58;
+A_knee = (knee_max - knee_min) / 2;
+knee_offset = (knee_max + knee_min) / 2;
+
 for i = 1:length(t)
 
     % sine wave
-    q1 = 1.0 * sin(w * t(i)) + 0.5;
-    q2 = 1.0 * sin(w * t(i)) - 1.0;
-    qdot1 = 2 * pi * 0.5 * cos(w * t(i));
-    qdot2 = 2 * pi * 0.25 * cos(w * t(i));
-    
+    q1 = A_hip * sin(w * t(i)) + hip_offset;
+    q2 = A_knee * sin(w * t(i)) + knee_offset;
+    qdot1 = A_hip * w * cos(w * t(i));
+    qdot2 = A_knee * w * cos(w * t(i));
+
     % populate
-    q_t(:, i) = [q1; q2];
+    q_t(:, i) = [q1 ; q2];
     qdot_t(:, i) = [qdot1; qdot2];
 end
 
@@ -156,7 +168,6 @@ function [p_knee, p_foot, v_foot] = fwd_kinmeatics(q, qdot, params)
     v_foot = J * qdot;
 end
 
-
 function q = inv_kinematics(p_foot_des, params)
     % Extract link lengths
     l1 = params.l1;
@@ -166,15 +177,38 @@ function q = inv_kinematics(p_foot_des, params)
     x = p_foot_des(1);
     z = p_foot_des(2);
 
+    % Chat GPT
     % Compute q2 using the law of cosines
-    c2 = (x^2 + z^2 - l1^2 - l2^2) / (2 * l1 * l2);
-    s2 = -sqrt(1 - c2^2);  % Choose positive for knee-up, negative for knee-down
-    q2 = atan2(s2, c2);
+    % c2 = (x^2 + z^2 - l1^2 - l2^2) / (2 * l1 * l2);
+    % s2 = -sqrt(1 - c2^2);  % Choose positive for knee-up, negative for knee-down
+    % q2 = atan2(s2, c2);
 
-    % Compute q1 using the law of sines
-    gamma = atan2(z, x);
-    beta = atan2(l2 * sin(q2), l1 + l2 * cos(q2));
-    q1 = gamma - beta + pi/2;
+    % % Compute q1 using the law of sines
+    % gamma = atan2(z, x);
+    % beta = atan2(l2 * sin(q2), l1 + l2 * cos(q2));
+    % q1 = gamma - beta + pi/2;
+
+    % https://www.youtube.com/watch?v=jyQyusoxlW8
+    % https://www.youtube.com/watch?v=RH3iAmMsolo
+    % finding the knee joint
+    L = sqrt(x^2 + z^2);
+
+    % solution 1
+    gamma1 = acos((L^2 - l1^2 - l2^2) / (-2 * l1 * l2));
+    q2 = pi - gamma1;
+
+    % solution 2
+    gamma2 = acos((L^2 - l1^2 - l2^2) / (2 * l1 * l2));
+    q2 = -gamma2;
+
+    % finding the hip joint
+    beta = atan2(x, -z);
+    alpha = acos((l2^2 - l1^2 - L^2) / (-2 * l1 * L));
+    % if q2 > 0
+    %     q1 = beta + alpha;
+    % else
+    q1 = beta + alpha;
+    % end
 
     % Return joint angles
     q = [q1; q2];

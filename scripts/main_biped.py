@@ -151,13 +151,14 @@ class BipedSimulation:
     # compute hip lateral position (HLIP) state
     def update_hlip_state(self):
 
+        # compute the forward kinematics
+        _, y_left_W, y_right_W = self.compute_forward_kinematics()
+
         # compute the HLIP position
         if self.stance_foot == "L":
-            left_pos_W = self.data.geom_xpos[self.left_foot_id]
-            p = self.p_com[0] - left_pos_W[0]
+            p = self.p_com[0] - y_left_W[0]
         elif self.stance_foot == "R":
-            right_pos_W = self.data.geom_xpos[self.right_foot_id]
-            p = self.p_com[0] - right_pos_W[0]
+            p = self.p_com[0] - y_right_W[0]
 
         self.p_rom = p[0]
         self.v_rom = self.v_com[0][0]
@@ -201,7 +202,7 @@ class BipedSimulation:
         nodes = np.asfortranarray(P)
         curve = bezier.Curve(nodes, degree=(P.shape[1]-1))
         
-        # evaulate the bezier curve at tiem t
+        # evaulate the bezier curve at time t
         p_swing = curve.evaluate(t)
         
         return p_swing
@@ -241,11 +242,27 @@ class BipedSimulation:
                       [np.sin(theta_W),  np.cos(theta_W)]])
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
+        # unpack the joint angles
+        q_HL = self.data.qpos[3]
+        q_KL = self.data.qpos[4]
+        q_HR = self.data.qpos[5]
+        q_KR = self.data.qpos[6]
+
+        # compute the positions of the feet relative to the base frame
+        p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
+                            -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
+        p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
+                             -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
+        p_left_W = p_base_W + R @ p_left_B
+        p_right_W = p_base_W + R @ p_right_B
+        y_left_W = p_left_W
+        y_right_W = p_right_W
+
         # query the location of the feet
-        left_pos = self.data.geom_xpos[self.left_foot_id]
-        right_pos = self.data.geom_xpos[self.right_foot_id]
-        y_left_W = np.array([left_pos[1], left_pos[2]]).reshape(2, 1)
-        y_right_W = np.array([right_pos[1], right_pos[2]]).reshape(2, 1)
+        # left_pos = self.data.geom_xpos[self.left_foot_id]
+        # right_pos = self.data.geom_xpos[self.right_foot_id]
+        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
+        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
 
         return y_base_W, y_left_W, y_right_W
 
@@ -419,27 +436,28 @@ class BipedSimulation:
             # compute desired outputs
             y_base_des, y_left_des, y_right_des = self.update_output_des()
 
-            # compute the inverse kinematics
-            _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+            # # compute the inverse kinematics
+            # _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+
+            # # compute torques
+            # q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
+            # qd_des = np.array([0.0, 0.0, 0.0, 0.0])
+
+            # # apply the torques
+            # tau = self.compute_torques(q_des, qd_des)
+            # self.data.ctrl[0] = tau[0][0]
+            # self.data.ctrl[1] = tau[1][0]
+            # self.data.ctrl[2] = tau[2][0]
+            # self.data.ctrl[3] = tau[3][0]
 
             # fixed joint state
-            # q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-            # qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
-            # self.data.ctrl[0] = tau[0]
-            # self.data.ctrl[1] = tau[1]
-            # self.data.ctrl[2] = tau[2]
-            # self.data.ctrl[3] = tau[3]
-
-            # compute torques
-            q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
-            qd_des = np.array([0.0, 0.0, 0.0, 0.0])
+            q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
+            qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
             tau = self.compute_torques(q_des, qd_des)
-
-            # apply the torques
-            self.data.ctrl[0] = tau[0][0]
-            self.data.ctrl[1] = tau[1][0]
-            self.data.ctrl[2] = tau[2][0]
-            self.data.ctrl[3] = tau[3][0]
+            self.data.ctrl[0] = tau[0]
+            self.data.ctrl[1] = tau[1]
+            self.data.ctrl[2] = tau[2]
+            self.data.ctrl[3] = tau[3]
 
             # update the camera to track the COM
             self.update_camera_to_com(cam)
