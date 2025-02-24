@@ -25,7 +25,7 @@ class BipedSimulation:
 
         # initial state
         qpos = np.array([0.0, 1.1,                # position x and z 
-                         0.0,                     # theta body
+                         0.5,                     # theta body
                          0.0, 0.0, 0.0, 0.0])  # left thigh, left knee, right thigh, right knee
         qvel = np.array([0.0, 0.0, 
                          0.0, 
@@ -288,16 +288,36 @@ class BipedSimulation:
         z_R = p_right_B[1][0]
 
         # compute the angles
-        c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        s_L = -np.sqrt(1 - c_L**2)
-        q_KL = np.arctan2(s_L, c_L)
+        # c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        # s_L = -np.sqrt(1 - c_L**2)
+        # q_KL = np.arctan2(s_L, c_L)
 
-        c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        s_R = -np.sqrt(1 - c_R**2)
-        q_KR = np.arctan2(s_R, c_R)
+        # c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        # s_R = -np.sqrt(1 - c_R**2)
+        # q_KR = np.arctan2(s_R, c_R)
 
-        q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
-        q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
+        # q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
+        # q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
+
+        # knee angle (Left)
+        L = np.sqrt(x_L**2 + z_L**2)
+        gamma = np.arccos((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2))
+        q_KL = gamma - np.pi
+
+        # hip angle (Left)
+        beta = np.arctan2(x_L, -z_L)
+        alpha = np.arccos((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L))
+        q_HL = beta + alpha
+
+        # knee angle (Right)
+        L = np.sqrt(x_R**2 + z_R**2)
+        gamma = np.arccos((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2))
+        q_KR = gamma - np.pi
+        
+        # hip angle (Right)
+        beta = np.arctan2(x_R, -z_R)
+        alpha = np.arccos((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L))
+        q_HR = beta + alpha
 
         # pack the positions
         q_base = np.array([p_base_W[0], p_base_W[1], theta_des]).reshape(3, 1)
@@ -412,8 +432,6 @@ class BipedSimulation:
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
 
-            # print("*" * 40)
-
             # update the simulation time
             self.sim_time = self.data.time
 
@@ -434,10 +452,26 @@ class BipedSimulation:
             self.update_hlip_state()
 
             # compute desired outputs
-            y_base_des, y_left_des, y_right_des = self.update_output_des()
+            # y_base_des, y_left_des, y_right_des = self.update_output_des()
 
-            # # compute the inverse kinematics
-            # _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+            # compute the inverse kinematics
+            y_base_des, y_left_des, y_right_des = self.compute_forward_kinematics()
+            
+            left_foot_pos = self.data.geom_xpos[self.left_foot_id]
+            right_foot_pos = self.data.geom_xpos[self.right_foot_id]
+
+            y_left_des[0] = left_foot_pos[0]
+            y_left_des[1] = left_foot_pos[2]
+            y_right_des[0] = right_foot_pos[0]
+            y_right_des[1] = right_foot_pos[2]
+
+            _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+
+            q_left_act = np.array([self.data.qpos[3], self.data.qpos[4]]).reshape(2, 1)
+            q_right_act = np.array([self.data.qpos[5], self.data.qpos[6]]).reshape(2, 1)
+
+            print(f"{np.linalg.norm(q_left_des - q_left_act):.4f}")
+            print(f"{np.linalg.norm(q_right_des - q_right_act):.4f}")
 
             # # compute torques
             # q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])

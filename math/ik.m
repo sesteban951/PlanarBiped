@@ -28,8 +28,8 @@ A_hip = (hip_max - hip_min) / 2;
 hip_offset = (hip_max + hip_min) / 2;
 
 % knees
-knee_max = 1.58;
-knee_min = -1.58;
+knee_max = 0.0;
+knee_min = -1.56;
 A_knee = (knee_max - knee_min) / 2;
 knee_offset = (knee_max + knee_min) / 2;
 
@@ -67,7 +67,7 @@ if animation == 0
     subplot(2, 1, 1);
     hold on; grid on;
     plot(t, q_t(1, :), 'r', 'LineWidth', 2);
-    plot(t, q_t_inv(1, :), 'b', 'LineWidth', 2);
+    plot(t, q_t_inv(1, :), 'b', 'LineWidth', 1);
     xlabel('Time (s)');
     ylabel('Joint Angle (rad)');
     title('Hip');
@@ -76,7 +76,7 @@ if animation == 0
     subplot(2, 1, 2);
     hold on; grid on;
     plot(t, q_t(2, :), 'r', 'LineWidth', 2);
-    plot(t, q_t_inv(2, :), 'b', 'LineWidth', 2);
+    plot(t, q_t_inv(2, :), 'b', 'LineWidth', 1);
     xlabel('Time (s)');
     ylabel('Joint Angle (rad)');
     title('Knee');
@@ -168,7 +168,7 @@ function [p_knee, p_foot, v_foot] = fwd_kinmeatics(q, qdot, params)
     v_foot = J * qdot;
 end
 
-function q = inv_kinematics(p_foot_des, params)
+function q_sol = inv_kinematics(p_foot_des, params)
     % Extract link lengths
     l1 = params.l1;
     l2 = params.l2;
@@ -193,23 +193,16 @@ function q = inv_kinematics(p_foot_des, params)
     % finding the knee joint
     L = sqrt(x^2 + z^2);
 
-    % solution 1
-    gamma1 = acos((L^2 - l1^2 - l2^2) / (-2 * l1 * l2));
-    q2 = pi - gamma1;
-
-    % solution 2
-    gamma2 = acos((L^2 - l1^2 - l2^2) / (2 * l1 * l2));
-    q2 = -gamma2;
-
-    % finding the hip joint
+    % knee angle (be aware that there are two solutions)
+    gamma = acos((L^2 - l1^2 - l2^2) / (-2 * l1 * l2));
+    q2 = pi - gamma;
+    q2 = -q2;
+    
+    % hip angle
     beta = atan2(x, -z);
     alpha = acos((l2^2 - l1^2 - L^2) / (-2 * l1 * L));
-    % if q2 > 0
-    %     q1 = beta + alpha;
-    % else
     q1 = beta + alpha;
-    % end
-
-    % Return joint angles
-    q = [q1; q2];
+    
+    % solution 
+    q_sol = [q1; q2];
 end

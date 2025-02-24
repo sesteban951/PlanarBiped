@@ -63,7 +63,7 @@
 					<!-- left shin -->
 					<body name="shin_left" pos="0 0 -0.5">
 						<geom name="shin_left" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 0.5" density="100"/>
-						<joint name="knee_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 0"/>
+						<joint name="knee_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 -0.1"/>
 						
 						<!-- left foot geom -->
 						<geom name="foot_left" type="sphere" size="0.076" pos="0 0.0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="1.5 1.5 1.5"/>
@@ -79,7 +79,7 @@
 					<!-- right shin -->
 					<body name="shin_right" pos="0 0 -0.5">
 						<geom name="shin_right" type="capsule" size="0.075 0.25" pos="0 0 -0.25" rgba="1.0 0.424 0.047 0.5" density="100"/>
-						<joint name="knee_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 0"/>
+						<joint name="knee_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 -0.1"/>
 
 						<!-- right foot geom -->
 						<geom name="foot_right" type="sphere" size="0.076" pos="0 0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="1.5 1.5 1.5"/>
@@ -93,10 +93,10 @@
 
 	<!-- actuators -->
 	<actuator>
-		<motor name="thigh_left_motor" joint="hip_left" ctrllimited="false" gear="1"/>
-    	<motor name="shin_left_motor" joint="knee_left" ctrllimited="false" gear="1"/>
-		<motor name="thigh_right_motor" joint="hip_right" ctrllimited="false" gear="1"/>
-		<motor name="shin_right_motor" joint="knee_right" ctrllimited="false" gear="1"/>
+		<motor name="hip_left_motor" joint="hip_left" ctrllimited="false" gear="1"/>
+    	<motor name="knee_left_motor" joint="knee_left" ctrllimited="false" gear="1"/>
+		<motor name="hip_right_motor" joint="hip_right" ctrllimited="false" gear="1"/>
+		<motor name="knee_right_motor" joint="knee_right" ctrllimited="false" gear="1"/>
 	</actuator>
 
 </mujoco>
