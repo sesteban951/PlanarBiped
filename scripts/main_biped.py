@@ -26,7 +26,7 @@ class BipedSimulation:
 
         # initial state
         qpos = np.array([0.0, 1.1,                # position x and z 
-                         0.,                     # theta body
+                         0.0,                     # theta body
                          0.0, 0.0, 0.0, 0.0])  # left thigh, left knee, right thigh, right knee
         qvel = np.array([0.0, 0.0, 
                          0.0, 
@@ -62,7 +62,7 @@ class BipedSimulation:
         self.v_des = 0
 
         # phasing variables
-        self.T_SSP = 0.26
+        self.T_SSP = 0.4
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
@@ -76,9 +76,9 @@ class BipedSimulation:
         self.u = None             # foot placement w.r.t to stance foot
 
         # desired height
-        self.theta_des = -0.2  # desired torso angle
-        self.z_0 = 0.9        # LIP constant height
-        self.z_apex = 0.1     # foot apex height
+        self.theta_des = -0.15 # desired torso angle
+        self.z_0 = 0.92        # LIP constant height
+        self.z_apex = 0.15     # foot apex height
 
         # some hyperbolic trig lambda func
         self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
@@ -91,12 +91,12 @@ class BipedSimulation:
         self.Kp_db = 1
         self.Kd_db = self.T_DSP + (1/self.lam) * self.coth(self.lam * self.T_SSP)
         self.sigma_P1 = self.lam * self.coth(0.5 * self.lam * self.T_SSP)
-        self.u_bias = -0.0
+        self.u_bias = 0.0
 
         # low level joint gains
-        self.kp_H = 250
+        self.kp_H = 150
         self.kd_H = 5
-        self.kp_K = 250
+        self.kp_K = 150
         self.kd_K = 5
 
     ############################################### ROM ######################################
@@ -503,19 +503,19 @@ class BipedSimulation:
             self.update_com_visualization()
 
             # Log the sim data
-            # with open(time_file_path, 'a') as f:
-            #     f.write(f"{self.sim_time}\n")
-            # with open(pos_file_path, 'a') as f:
-            #     f.write(f"{self.data.qpos[0]},{self.data.qpos[1]},{self.data.qpos[2]},{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
-            # with open(vel_file_path, 'a') as f:
-            #     f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
-            # with open(tau_file_path, 'a') as f:
-            #     f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
+            with open(time_file_path, 'a') as f:
+                f.write(f"{self.sim_time}\n")
+            with open(pos_file_path, 'a') as f:
+                f.write(f"{self.data.qpos[0]},{self.data.qpos[1]},{self.data.qpos[2]},{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+            with open(vel_file_path, 'a') as f:
+                f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
+            with open(tau_file_path, 'a') as f:
+                f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
 
-            # with open(q_des_path, 'a') as f:
-            #     f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
-            # with open(q_act_path, 'a') as f:
-            #     f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+            with open(q_des_path, 'a') as f:
+                f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
+            with open(q_act_path, 'a') as f:
+                f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)
