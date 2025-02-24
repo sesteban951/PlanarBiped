@@ -62,7 +62,7 @@ class BipedSimulation:
         self.v_des = 0
 
         # phasing variables
-        self.T_SSP = 0.28
+        self.T_SSP = 0.26
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
@@ -70,7 +70,7 @@ class BipedSimulation:
         self.stance_foot = None
 
         # foot position variables
-        self.p_stance_prev = None # previous stance foot position
+        self.p_swing_init = None # previous stance foot position
         self.p_stance = None      # current stance foot position
         self.p_swing = None       # current swing foot position
         self.u = None             # foot placement w.r.t to stance foot
@@ -78,25 +78,26 @@ class BipedSimulation:
         # desired height
         self.theta_des = -0.2  # desired torso angle
         self.z_0 = 0.9        # LIP constant height
-        self.z_apex = 0.15     # foot apex height
+        self.z_apex = 0.1     # foot apex height
 
         # some hyperbolic trig lambda func
         self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
 
         # HLIP matrices
-        g = 9.81
+        g = -self.model.opt.gravity[2]
         self.lam = np.sqrt(g / self.z_0)
         self.A = np.array([[0,           1],
                            [self.lam**2, 0]])
         self.Kp_db = 1
         self.Kd_db = self.T_DSP + (1/self.lam) * self.coth(self.lam * self.T_SSP)
         self.sigma_P1 = self.lam * self.coth(0.5 * self.lam * self.T_SSP)
+        self.u_bias = -0.0
 
         # low level joint gains
         self.kp_H = 250
-        self.kd_H = 10
-        self.kp_K = 350
-        self.kd_K = 10
+        self.kd_H = 5
+        self.kp_K = 250
+        self.kd_K = 5
 
     ############################################### ROM ######################################
 
@@ -123,11 +124,11 @@ class BipedSimulation:
 
         # based on the phase variable, assign stance foot position
         if self.stance_foot == "L":
-            self.p_stance_prev = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
+            self.p_swing_init = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
             self.p_stance = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
 
         elif self.stance_foot == "R":
-            self.p_stance_prev = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
+            self.p_swing_init = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
             self.p_stance = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
 
     # compute center of mass (COM) state
@@ -189,7 +190,7 @@ class BipedSimulation:
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
-        self.u = u_ff + u_pos + u_vel
+        self.u = u_ff + u_pos + u_vel + self.u_bias
 
     ############################################### KINEMATICS ######################################
 
@@ -200,12 +201,12 @@ class BipedSimulation:
         self.compute_foot_placement()
 
         # initial and end points
-        x0 = self.p_stance_prev[0][0]
+        x0 = self.p_swing_init[0][0]
         xm = (self.p_stance[0][0] + self.u) /2
         xf = self.p_stance[0][0] + self.u
         
         z0 = self.z_foot_offset
-        zm = self.z_apex * (16/5) + self.z_foot_offset
+        zm = (self.z_apex + self.z_foot_offset) * (16/5) 
         zf = self.z_foot_offset
 
         # bezier curve points
@@ -229,13 +230,12 @@ class BipedSimulation:
     def update_output_des(self):
         
         # compute the desired base outputs
+        # TODO: probably dont use the base directly
         y_base_W, _, _ = self.compute_forward_kinematics()
         y_base_W[1] = self.z_0 + self.z_foot_offset
         y_base_W[2] = self.theta_des
         y_base_des_W = y_base_W
         
-        # TODO: probably dont use the base directly
-
         # define the desired foot outputs
         p_swing_W = self.compute_swing_foot_pos()
         p_stance_W = self.p_stance
@@ -299,7 +299,7 @@ class BipedSimulation:
         p_left_B = (R.transpose() @ (p_left_W - p_base_W)).reshape(2, 1)
         p_right_B = (R.transpose() @ (p_right_W - p_base_W)).reshape(2, 1)
 
-        # unpack the desired position
+        # unpack the desired position feet positions in world frame
         x_L = p_left_B[0][0]
         z_L = p_left_B[1][0]
         x_R = p_right_B[0][0]
@@ -342,11 +342,10 @@ class BipedSimulation:
         q_HR = beta + alpha
 
         # pack the positions
-        q_base = np.array([p_base_W[0], p_base_W[1], theta_des]).reshape(3, 1)
         q_left = np.array([q_HL, q_KL]).reshape(2, 1)
         q_right = np.array([q_HR, q_KR]).reshape(2, 1)
 
-        return q_base, q_left, q_right
+        return q_left, q_right
     
     ############################################### LOW LEVEL ######################################
 
@@ -477,7 +476,7 @@ class BipedSimulation:
             y_base_des, y_left_des, y_right_des = self.update_output_des()
 
             # compute the inverse kinematics
-            _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
+            q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
 
             # compute torques
             q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
@@ -487,8 +486,6 @@ class BipedSimulation:
             self.data.ctrl[1] = tau[1][0]
             self.data.ctrl[2] = tau[2][0]
             self.data.ctrl[3] = tau[3][0]
-
-            print(self.p_stance_prev)
 
             # # fixed joint state
             # q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
