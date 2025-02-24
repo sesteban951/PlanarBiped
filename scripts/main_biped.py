@@ -1,6 +1,7 @@
 
 # standard library
 import numpy as np
+import scipy as sp
 import os
 
 # mujoco stuff
@@ -25,7 +26,7 @@ class BipedSimulation:
 
         # initial state
         qpos = np.array([0.0, 1.1,                # position x and z 
-                         0.5,                     # theta body
+                         0.,                     # theta body
                          0.0, 0.0, 0.0, 0.0])  # left thigh, left knee, right thigh, right knee
         qvel = np.array([0.0, 0.0, 
                          0.0, 
@@ -33,7 +34,7 @@ class BipedSimulation:
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
 
-        # geomtry id
+        # geomtry id (in case I want to query the position)
         self.left_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "foot_left")
         self.right_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "foot_right")
         
@@ -41,7 +42,7 @@ class BipedSimulation:
         self.sim_time = 0.0
         self.max_sim_time = 10.0
         self.dt_sim = self.model.opt.timestep
-        self.hz_render = 1000
+        self.hz_render = 50
 
         # model parameters
         self.z_foot_offset = 0.075 # (foot is round)
@@ -57,19 +58,16 @@ class BipedSimulation:
         self.v_rom = None
 
         # desired COM state
-        self.p_rom_des = 0
-        self.v_rom_des = 0
+        self.p_des = 0
+        self.v_des = 0
 
         # phasing variables
         self.T_SSP = 0.28
+        self.T_DSP = 0.0
+        self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
         self.num_steps = 0
         self.stance_foot = None
-
-        # desired height
-        self.theta_des = -0.2  # desired torso angle
-        self.z_0 = 0.9        # LIP constant height
-        self.z_apex = 0.15     # foot apex height
 
         # foot position variables
         self.p_stance_prev = None # previous stance foot position
@@ -77,17 +75,27 @@ class BipedSimulation:
         self.p_swing = None       # current swing foot position
         self.u = None             # foot placement w.r.t to stance foot
 
-        # current joint state solution
-        self.q_ik = np.zeros((4, 1))
+        # desired height
+        self.theta_des = -0.2  # desired torso angle
+        self.z_0 = 0.9        # LIP constant height
+        self.z_apex = 0.15     # foot apex height
 
-        # Raibert gains
-        self.kp_raibert = -1.0
-        self.kd_raibert = -0.
+        # some hyperbolic trig lambda func
+        self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
+
+        # HLIP matrices
+        g = 9.81
+        self.lam = np.sqrt(g / self.z_0)
+        self.A = np.array([[0,           1],
+                           [self.lam**2, 0]])
+        self.Kp_db = 1
+        self.Kd_db = self.T_DSP + (1/self.lam) * self.coth(self.lam * self.T_SSP)
+        self.sigma_P1 = self.lam * self.coth(0.5 * self.lam * self.T_SSP)
 
         # low level joint gains
         self.kp_H = 250
         self.kd_H = 10
-        self.kp_K = 250
+        self.kp_K = 350
         self.kd_K = 10
 
     ############################################### ROM ######################################
@@ -166,12 +174,22 @@ class BipedSimulation:
     # compute the foot placement based on Raibert
     def compute_foot_placement(self):
 
-        # TODO: computing this the wrong way I think 
-        u_pos = self.kp_raibert * (self.p_rom_des - self.p_rom)
-        u_vel = self.kd_raibert * (self.v_rom_des - self.v_rom)
+        # compute the desired preimpact HLIP state
+        p_minus_H = (self.v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
+        v_minus_H = self.sigma_P1 * (self.v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
 
-        self.u = u_pos + u_vel
-        
+        # compute the predicted preimpact state of the robot
+        x_R = np.array([self.p_rom, self.v_rom]).reshape(2, 1)
+        x_minus_R = sp.linalg.expm(self.A * (self.T_SSP - self.T_phase)) @ x_R
+        p_minus_R = x_minus_R[0][0]
+        v_minus_R = x_minus_R[1][0]
+
+        # compute the foot placement relative to the stance foot
+        u_ff = self.v_des * self.T_SSP
+        u_pos = self.Kp_db * (p_minus_R - p_minus_H)
+        u_vel = self.Kd_db * (v_minus_R - v_minus_H)
+
+        self.u = u_ff + u_pos + u_vel
 
     ############################################### KINEMATICS ######################################
 
@@ -242,6 +260,12 @@ class BipedSimulation:
                       [np.sin(theta_W),  np.cos(theta_W)]])
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
+        # query the location of the feet
+        # left_pos = self.data.geom_xpos[self.left_foot_id]
+        # right_pos = self.data.geom_xpos[self.right_foot_id]
+        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
+        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
+
         # unpack the joint angles
         q_HL = self.data.qpos[3]
         q_KL = self.data.qpos[4]
@@ -257,12 +281,6 @@ class BipedSimulation:
         p_right_W = p_base_W + R @ p_right_B
         y_left_W = p_left_W
         y_right_W = p_right_W
-
-        # query the location of the feet
-        # left_pos = self.data.geom_xpos[self.left_foot_id]
-        # right_pos = self.data.geom_xpos[self.right_foot_id]
-        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
-        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
 
         return y_base_W, y_left_W, y_right_W
 
@@ -301,22 +319,26 @@ class BipedSimulation:
 
         # knee angle (Left)
         L = np.sqrt(x_L**2 + z_L**2)
-        gamma = np.arccos((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2))
+        arg = np.clip((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2),  -1.0, 1.0)
+        gamma = np.arccos(arg)
         q_KL = gamma - np.pi
 
         # hip angle (Left)
         beta = np.arctan2(x_L, -z_L)
-        alpha = np.arccos((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L))
+        arg = np.clip((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L),  -1.0, 1.0)
+        alpha = np.arccos(arg)
         q_HL = beta + alpha
 
         # knee angle (Right)
         L = np.sqrt(x_R**2 + z_R**2)
-        gamma = np.arccos((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2))
+        arg = np.clip((L**2 - self.l1**2 - self.l2**2) / (-2 * self.l1 * self.l2),  -1.0, 1.0)
+        gamma = np.arccos(arg)
         q_KR = gamma - np.pi
         
         # hip angle (Right)
         beta = np.arctan2(x_R, -z_R)
-        alpha = np.arccos((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L))
+        arg = np.clip((self.l2**2 - self.l1**2 - L**2) / (-2 * self.l1 * L),  -1.0, 1.0)
+        alpha = np.arccos(arg)
         q_HR = beta + alpha
 
         # pack the positions
@@ -452,46 +474,30 @@ class BipedSimulation:
             self.update_hlip_state()
 
             # compute desired outputs
-            # y_base_des, y_left_des, y_right_des = self.update_output_des()
+            y_base_des, y_left_des, y_right_des = self.update_output_des()
 
             # compute the inverse kinematics
-            y_base_des, y_left_des, y_right_des = self.compute_forward_kinematics()
-            
-            left_foot_pos = self.data.geom_xpos[self.left_foot_id]
-            right_foot_pos = self.data.geom_xpos[self.right_foot_id]
-
-            y_left_des[0] = left_foot_pos[0]
-            y_left_des[1] = left_foot_pos[2]
-            y_right_des[0] = right_foot_pos[0]
-            y_right_des[1] = right_foot_pos[2]
-
             _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
 
-            q_left_act = np.array([self.data.qpos[3], self.data.qpos[4]]).reshape(2, 1)
-            q_right_act = np.array([self.data.qpos[5], self.data.qpos[6]]).reshape(2, 1)
-
-            print(f"{np.linalg.norm(q_left_des - q_left_act):.4f}")
-            print(f"{np.linalg.norm(q_right_des - q_right_act):.4f}")
-
-            # # compute torques
-            # q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
-            # qd_des = np.array([0.0, 0.0, 0.0, 0.0])
-
-            # # apply the torques
-            # tau = self.compute_torques(q_des, qd_des)
-            # self.data.ctrl[0] = tau[0][0]
-            # self.data.ctrl[1] = tau[1][0]
-            # self.data.ctrl[2] = tau[2][0]
-            # self.data.ctrl[3] = tau[3][0]
-
-            # fixed joint state
-            q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-            qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
+            # compute torques
+            q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
+            qd_des = np.array([0.0, 0.0, 0.0, 0.0])
             tau = self.compute_torques(q_des, qd_des)
-            self.data.ctrl[0] = tau[0]
-            self.data.ctrl[1] = tau[1]
-            self.data.ctrl[2] = tau[2]
-            self.data.ctrl[3] = tau[3]
+            self.data.ctrl[0] = tau[0][0]
+            self.data.ctrl[1] = tau[1][0]
+            self.data.ctrl[2] = tau[2][0]
+            self.data.ctrl[3] = tau[3][0]
+
+            print(self.p_stance_prev)
+
+            # # fixed joint state
+            # q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
+            # qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
+            # tau = self.compute_torques(q_des, qd_des)
+            # self.data.ctrl[0] = tau[0]
+            # self.data.ctrl[1] = tau[1]
+            # self.data.ctrl[2] = tau[2]
+            # self.data.ctrl[3] = tau[3]
 
             # update the camera to track the COM
             self.update_camera_to_com(cam)
