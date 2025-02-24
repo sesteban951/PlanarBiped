@@ -25,25 +25,23 @@ class BipedSimulation:
 
         # initial state
         qpos = np.array([0.0, 1.1,                # position x and z 
-                         -0.0,                     # theta body
-                         0.0, -0.0, -0.0, -0.0])  # left thigh, left knee, right thigh, right knee
+                         0.0,                     # theta body
+                         0.0, 0.0, 0.0, 0.0])  # left thigh, left knee, right thigh, right knee
         qvel = np.array([0.0, 0.0, 
                          0.0, 
                          0.0, 0.0,  0.0, 0.0])  
-
-        # set the initial state
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
 
         # geomtry id
-        self.left_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "left_foot")
-        self.right_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "right_foot")
+        self.left_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "foot_left")
+        self.right_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "foot_right")
         
         # sim parameters
         self.sim_time = 0.0
         self.max_sim_time = 10.0
         self.dt_sim = self.model.opt.timestep
-        self.hz_render = 50
+        self.hz_render = 1000
 
         # model parameters
         self.z_foot_offset = 0.075 # (foot is round)
@@ -63,14 +61,14 @@ class BipedSimulation:
         self.v_rom_des = 0
 
         # phasing variables
-        self.T_SSP = 0.36
+        self.T_SSP = 0.28
         self.T_phase = 0.0
         self.num_steps = 0
         self.stance_foot = None
 
         # desired height
-        self.theta_des = -0.3  # desired torso angle
-        self.z_0 = 0.88        # LIP constant height
+        self.theta_des = -0.2  # desired torso angle
+        self.z_0 = 0.9        # LIP constant height
         self.z_apex = 0.15     # foot apex height
 
         # foot position variables
@@ -84,10 +82,10 @@ class BipedSimulation:
 
         # Raibert gains
         self.kp_raibert = -1.0
-        self.kd_raibert = 0.0
+        self.kd_raibert = -0.
 
         # low level joint gains
-        self.kp_H = 200
+        self.kp_H = 250
         self.kd_H = 10
         self.kp_K = 250
         self.kd_K = 10
@@ -119,6 +117,7 @@ class BipedSimulation:
         if self.stance_foot == "L":
             self.p_stance_prev = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
             self.p_stance = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
+
         elif self.stance_foot == "R":
             self.p_stance_prev = np.array([y_left_W[0], [self.z_foot_offset]]).reshape(2, 1)
             self.p_stance = np.array([y_right_W[0], [self.z_foot_offset]]).reshape(2, 1)
@@ -145,21 +144,20 @@ class BipedSimulation:
         # Divide by the total mass to get the overall CoM
         com /= total_mass
 
-        # update teh COM state
+        # update the COM state
         self.p_com = np.array([com[0], com[2]]).reshape(2, 1)
         self.v_com = np.array([self.data.qvel[0], self.data.qvel[1]]).reshape(2, 1)
 
     # compute hip lateral position (HLIP) state
     def update_hlip_state(self):
 
-        # compute the forward kinematics
-        _, y_left_W, y_right_W = self.compute_forward_kinematics()
-
         # compute the HLIP position
         if self.stance_foot == "L":
-            p = self.p_com[0] - y_left_W[0]
+            left_pos_W = self.data.geom_xpos[self.left_foot_id]
+            p = self.p_com[0] - left_pos_W[0]
         elif self.stance_foot == "R":
-            p = self.p_com[0] - y_right_W[0]
+            right_pos_W = self.data.geom_xpos[self.right_foot_id]
+            p = self.p_com[0] - right_pos_W[0]
 
         self.p_rom = p[0]
         self.v_rom = self.v_com[0][0]
@@ -168,7 +166,10 @@ class BipedSimulation:
     def compute_foot_placement(self):
 
         # TODO: computing this the wrong way I think 
-        self.u = self.kp_raibert * (self.p_rom_des - self.p_rom) + self.kd_raibert * (self.v_rom_des - self.v_rom)
+        u_pos = self.kp_raibert * (self.p_rom_des - self.p_rom)
+        u_vel = self.kd_raibert * (self.v_rom_des - self.v_rom)
+
+        self.u = u_pos + u_vel
         
 
     ############################################### KINEMATICS ######################################
@@ -240,31 +241,11 @@ class BipedSimulation:
                       [np.sin(theta_W),  np.cos(theta_W)]])
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
-        # unpack the joint angles
-        q_HL = self.data.qpos[3]
-        q_KL = self.data.qpos[4]
-        q_HR = self.data.qpos[5]
-        q_KR = self.data.qpos[6]
-
-        # compute the positions of the feet relative to the base frame
-        p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
-                            -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
-        p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
-                             -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
-        y_left_W = p_base_W + R @ p_left_B
-        y_right_W = p_base_W + R @ p_right_B
-
-        print("--" * 40)
-
-        print(y_left_W.transpose())
-
         # query the location of the feet
         left_pos = self.data.geom_xpos[self.left_foot_id]
         right_pos = self.data.geom_xpos[self.right_foot_id]
-        y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
-        y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
-
-        print(y_left_W.transpose())
+        y_left_W = np.array([left_pos[1], left_pos[2]]).reshape(2, 1)
+        y_right_W = np.array([right_pos[1], right_pos[2]]).reshape(2, 1)
 
         return y_base_W, y_left_W, y_right_W
 
@@ -348,18 +329,12 @@ class BipedSimulation:
     
     ############################################### AUX FUNC ######################################
 
-    # # create sphere for visualization purposes
-    # def create_sphere_visual(self, pos, radius, rgba):
-        
-    #     # Initialize the geometry for the sphere       
-    #     mujoco.mjv_initGeom(self.scene.geoms[self.scene.ngeom], # Get the next available geom slot
-    #                         mujoco.mjtGeom.mjGEOM_SPHERE,       # Sphere geometry
-    #                         np.array([radius, 0, 0]),           # Size (radius, ignored, ignored)
-    #                         np.array(pos),           # Position (x, y, z)
-    #                         np.array([1, 0, 0, 0]),  # Identity quaternion (no rotation)
-    #                         rgba)                    # Color
-    
-    #     self.scene.ngeom += 1  # Increment the number of geoms in the scene
+    def update_com_visualization(self):
+        p_com_flat = np.ravel(self.p_com)
+        com_pos = np.array([p_com_flat[0], 0.0, p_com_flat[1]])
+        com_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "com_vis")
+        if com_geom_id != -1:
+            self.model.geom_pos[com_geom_id] = com_pos  # Update position
 
     # Function to update the camera position to track the center of mass (CoM)
     def update_camera_to_com(self, cam):
@@ -399,7 +374,7 @@ class BipedSimulation:
         if not glfw.init():
             raise Exception("Could not initialize GLFW")
 
-        window = glfw.create_window(1920, 1080, "Planar Biped Sim", None, None)
+        window = glfw.create_window(720, 480, "Planar Biped Sim", None, None)
         glfw.make_context_current(window)
 
         # Create a camera to render the scene
@@ -448,8 +423,12 @@ class BipedSimulation:
             _, q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
 
             # fixed joint state
-            q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-            qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
+            # q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
+            # qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
+            # self.data.ctrl[0] = tau[0]
+            # self.data.ctrl[1] = tau[1]
+            # self.data.ctrl[2] = tau[2]
+            # self.data.ctrl[3] = tau[3]
 
             # compute torques
             q_des = np.array([q_left_des[0], q_left_des[1], q_right_des[0], q_right_des[1]])
@@ -465,20 +444,23 @@ class BipedSimulation:
             # update the camera to track the COM
             self.update_camera_to_com(cam)
 
-             # Log the sim data
-            with open(time_file_path, 'a') as f:
-                f.write(f"{self.sim_time}\n")
-            with open(pos_file_path, 'a') as f:
-                f.write(f"{self.data.qpos[0]},{self.data.qpos[1]},{self.data.qpos[2]},{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
-            with open(vel_file_path, 'a') as f:
-                f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
-            with open(tau_file_path, 'a') as f:
-                f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
+            # update the COM visualization
+            self.update_com_visualization()
 
-            with open(q_des_path, 'a') as f:
-                f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
-            with open(q_act_path, 'a') as f:
-                f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+            # Log the sim data
+            # with open(time_file_path, 'a') as f:
+            #     f.write(f"{self.sim_time}\n")
+            # with open(pos_file_path, 'a') as f:
+            #     f.write(f"{self.data.qpos[0]},{self.data.qpos[1]},{self.data.qpos[2]},{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+            # with open(vel_file_path, 'a') as f:
+            #     f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
+            # with open(tau_file_path, 'a') as f:
+            #     f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
+
+            # with open(q_des_path, 'a') as f:
+            #     f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
+            # with open(q_act_path, 'a') as f:
+            #     f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)
