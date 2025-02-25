@@ -40,7 +40,7 @@ class BipedSimulation:
         
         # sim parameters
         self.sim_time = 0.0
-        self.max_sim_time = 15.0
+        self.max_sim_time = 10.0
         self.dt_sim = self.model.opt.timestep
         self.hz_render = 50
 
@@ -58,10 +58,10 @@ class BipedSimulation:
         self.v_rom = None
 
         # desired COM state
-        self.v_des = 0.5
+        self.v_des = 0.9
 
         # phasing variables
-        self.T_SSP = 0.40
+        self.T_SSP = 0.36
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
@@ -93,9 +93,9 @@ class BipedSimulation:
         self.u_bias = 0.0
 
         # low level joint gains
-        self.kp_H = 1000
+        self.kp_H = 900
         self.kd_H = 50
-        self.kp_K = 1000
+        self.kp_K = 900
         self.kd_K = 50
 
     ############################################### ROM ######################################
@@ -229,7 +229,6 @@ class BipedSimulation:
     def update_output_des(self):
         
         # compute the desired base outputs
-        # TODO: probably dont use the base directly
         y_base_W, _, _ = self.compute_forward_kinematics()
         y_base_W[1] = self.z_0 + self.z_foot_offset
         y_base_W[2] = self.theta_des
@@ -260,26 +259,26 @@ class BipedSimulation:
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
         # query the location of the feet
-        left_pos = self.data.geom_xpos[self.left_foot_id]
-        right_pos = self.data.geom_xpos[self.right_foot_id]
-        y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
-        y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
+        # left_pos = self.data.geom_xpos[self.left_foot_id]
+        # right_pos = self.data.geom_xpos[self.right_foot_id]
+        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
+        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
 
-        # # unpack the joint angles
-        # q_HL = self.data.qpos[3]
-        # q_KL = self.data.qpos[4]
-        # q_HR = self.data.qpos[5]
-        # q_KR = self.data.qpos[6]
+        # unpack the joint angles
+        q_HL = self.data.qpos[3]
+        q_KL = self.data.qpos[4]
+        q_HR = self.data.qpos[5]
+        q_KR = self.data.qpos[6]
 
-        # # compute the positions of the feet relative to the base frame
-        # p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
-        #                     -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
-        # p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
-        #                      -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
-        # p_left_W = p_base_W + R @ p_left_B
-        # p_right_W = p_base_W + R @ p_right_B
-        # y_left_W = p_left_W
-        # y_right_W = p_right_W
+        # compute the positions of the feet relative to the base frame
+        p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
+                            -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
+        p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
+                             -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
+        p_left_W = p_base_W + R @ p_left_B
+        p_right_W = p_base_W + R @ p_right_B
+        y_left_W = p_left_W
+        y_right_W = p_right_W
 
         return y_base_W, y_left_W, y_right_W
 
@@ -305,16 +304,16 @@ class BipedSimulation:
         z_R = p_right_B[1][0]
 
         # compute the angles
-        c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        s_L = -np.sqrt(1 - c_L**2)
-        q_KL = np.arctan2(s_L, c_L)
+        # c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        # s_L = -np.sqrt(1 - c_L**2)
+        # q_KL = np.arctan2(s_L, c_L)
 
-        c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        s_R = -np.sqrt(1 - c_R**2)
-        q_KR = np.arctan2(s_R, c_R)
+        # c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        # s_R = -np.sqrt(1 - c_R**2)
+        # q_KR = np.arctan2(s_R, c_R)
 
-        q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
-        q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
+        # q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
+        # q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
 
         # knee angle (Left)
         L = np.sqrt(x_L**2 + z_L**2)
@@ -409,12 +408,23 @@ class BipedSimulation:
         
         # csv data path
         time_file_path = "../data/time.csv"
+        
+        # whole body state
         pos_file_path = "../data/pos.csv"
         vel_file_path = "../data/vel.csv"
         tau_file_path = "../data/tau.csv"
 
+        # joint state
         q_des_path = "../data/q_des.csv"
         q_act_path = "../data/q_act.csv"
+
+        # desired outputs
+        y_des_path = "../data/y_des.csv"
+        y_act_path = "../data/y_act.csv"
+
+        # phase
+        t_phase_path = "../data/t_phase.csv"
+        stance_path = "../data/stance.csv"
 
         # remove the data files if they exist
         try:
@@ -424,6 +434,8 @@ class BipedSimulation:
             os.remove(tau_file_path)
             os.remove(q_des_path)
             os.remove(q_act_path)
+            os.remove(y_des_path)
+            os.remove(y_act_path)
         except OSError:
             pass
     
@@ -486,13 +498,16 @@ class BipedSimulation:
             self.data.ctrl[2] = tau[2][0]
             self.data.ctrl[3] = tau[3][0]
 
+            # compute the forward kinematics
+            y_base_act, y_left_act, y_right_act = self.compute_forward_kinematics()
+
             # update the camera to track the COM
             self.update_camera_to_com(cam)
 
             # update the COM visualization
             self.update_com_visualization()
 
-            # Log the sim data
+            # Log the whole body data
             with open(time_file_path, 'a') as f:
                 f.write(f"{self.sim_time}\n")
             with open(pos_file_path, 'a') as f:
@@ -500,12 +515,28 @@ class BipedSimulation:
             with open(vel_file_path, 'a') as f:
                 f.write(f"{self.data.qvel[0]},{self.data.qvel[1]},{self.data.qvel[2]},{self.data.qvel[3]},{self.data.qvel[4]},{self.data.qvel[5]},{self.data.qvel[6]}\n")
             with open(tau_file_path, 'a') as f:
-                f.write(f"{tau[0]},{tau[1]},{tau[2]},{tau[3]}\n")
+                f.write(f"{tau[0][0]},{tau[1][0]},{tau[2][0]},{tau[3][0]}\n")
 
+            # Log the joint data
             with open(q_des_path, 'a') as f:
                 f.write(f"{q_des[0][0]},{q_des[1][0]},{q_des[2][0]},{q_des[3][0]}\n")
             with open(q_act_path, 'a') as f:
                 f.write(f"{self.data.qpos[3]},{self.data.qpos[4]},{self.data.qpos[5]},{self.data.qpos[6]}\n")
+
+            # Log the desired outputs
+            with open(y_des_path, 'a') as f:
+                f.write(f"{y_base_des[0][0]},{y_base_des[1][0]},{y_base_des[2][0]},{y_left_des[0][0]},{y_left_des[1][0]},{y_right_des[0][0]},{y_right_des[1][0]}\n")
+            with open(y_act_path, 'a') as f:
+                f.write(f"{y_base_act[0][0]},{y_base_act[1][0]},{y_base_act[2][0]},{y_left_act[0][0]},{y_left_act[1][0]},{y_right_act[0][0]},{y_right_act[1][0]}\n")
+
+            # Log the phase
+            with open(t_phase_path, 'a') as f:
+                f.write(f"{self.T_phase}\n")
+            with open(stance_path, 'a') as f:
+                if self.stance_foot == "L":
+                    f.write("1\n")
+                elif self.stance_foot == "R":
+                    f.write("0\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)

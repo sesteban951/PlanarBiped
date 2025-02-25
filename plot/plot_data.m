@@ -90,52 +90,52 @@ if plot_states == 1
 
     % Base
     subplot(3,3,1);
-    hold on; yline(0);
-    plot(t, px_base);
+    hold on; 
+    plot(t, px_base, 'LineWidth', 2);
     title('Base px');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,4);
-    hold on; yline(0);
-    plot(t, pz_base);
+    hold on; 
+    plot(t, pz_base, 'LineWidth', 2);
     title('Base pz');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,7);
-    hold on; yline(0);
-    plot(t, theta_base);
+    hold on; 
+    plot(t, theta_base, 'LineWidth', 2);
     title('Base theta');
     xlabel('Time (s)');
     grid on;
 
     % Left Leg
     subplot(3,3,2);
-    hold on; yline(0);
-    plot(t, q_HL);
+    hold on; 
+    plot(t, q_HL, 'LineWidth', 2);
     title('Left q_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,5);
-    hold on; yline(0);
-    plot(t, q_KL);
+    hold on; 
+    plot(t, q_KL, 'LineWidth', 2);
     title('Left q_K');
     xlabel('Time (s)');
     grid on;
 
     % Right Leg
     subplot(3,3,3);
-    hold on; yline(0);
-    plot(t, q_HR);
+    hold on; 
+    plot(t, q_HR, 'LineWidth', 2);
     title('Right q_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,6);
-    hold on; yline(0);
-    plot(t, q_KR);
+    hold on; 
+    plot(t, q_KR, 'LineWidth', 2);
     title('Right q_K');
     xlabel('Time (s)');
     grid on;
@@ -147,21 +147,21 @@ if plot_states == 1
     % Base
     subplot(3,3,1);
     hold on; yline(0);
-    plot(t, vx_base);
+    plot(t, vx_base, 'LineWidth', 2);
     title('Base vx');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,4);
     hold on; yline(0);
-    plot(t, vz_base);
+    plot(t, vz_base, 'LineWidth', 2);
     title('Base vz');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,7);
     hold on; yline(0);
-    plot(t, thetadot_base);
+    plot(t, thetadot_base, 'LineWidth', 2);
     title('Base thetadot');
     xlabel('Time (s)');
     grid on;
@@ -169,14 +169,14 @@ if plot_states == 1
     % Left Leg
     subplot(3,3,2);
     hold on; yline(0);
-    plot(t, qd_HL);
+    plot(t, qd_HL, 'LineWidth', 2);
     title('Left qd_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,5);
     hold on; yline(0);
-    plot(t, qd_KL);
+    plot(t, qd_KL, 'LineWidth', 2);
     title('Left qd_K');
     xlabel('Time (s)');
     grid on;
@@ -184,14 +184,14 @@ if plot_states == 1
     % Right Leg
     subplot(3,3,3);
     hold on; yline(0);
-    plot(t, qd_HR);
+    plot(t, qd_HR, 'LineWidth', 2);
     title('Right qd_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(3,3,6);
     hold on; yline(0);
-    plot(t, qd_KR);
+    plot(t, qd_KR, 'LineWidth', 2);
     title('Right qd_K');
     xlabel('Time (s)');
     grid on;
@@ -203,14 +203,14 @@ if plot_states == 1
     % Left Leg
     subplot(2,2,1);
     hold on; yline(0);
-    plot(t, tau_HL);
+    plot(t, tau_HL, 'LineWidth', 2);
     title('Left tau_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(2,2,2);
     hold on; yline(0);
-    plot(t, tau_KL);
+    plot(t, tau_KL, 'LineWidth', 2);
     title('Left tau_K');
     xlabel('Time (s)');
     grid on;
@@ -218,18 +218,17 @@ if plot_states == 1
     % Right Leg
     subplot(2,2,3);
     hold on; yline(0);
-    plot(t, tau_HR);
+    plot(t, tau_HR, 'LineWidth', 2);
     title('Right tau_H');
     xlabel('Time (s)');
     grid on;
 
     subplot(2,2,4);
     hold on; yline(0);
-    plot(t, tau_KR);
+    plot(t, tau_KR, 'LineWidth', 2);
     title('Right tau_K');
     xlabel('Time (s)');
     grid on;
-
 
     % ORBITS
     tab_orbit = uitab(tabgroup, 'Title', 'Orbit');
@@ -237,7 +236,7 @@ if plot_states == 1
 
     subplot(2,2,1);
     hold on; xline(0); yline(0);
-    plot(q_HL, qd_HL);
+    plot(q_HL, qd_HL, 'LineWidth', 1);
     title('Left Hip');
     xlabel('q');
     ylabel('qd');
@@ -245,7 +244,7 @@ if plot_states == 1
 
     subplot(2,2,2);
     hold on; xline(0); yline(0);
-    plot(q_KL, qd_KL);
+    plot(q_KL, qd_KL, 'LineWidth', 1);
     title('Left Knee');
     xlabel('q');
     ylabel('qd');
@@ -253,7 +252,7 @@ if plot_states == 1
 
     subplot(2,2,3);
     hold on; xline(0); yline(0);
-    plot(q_HR, qd_HR);
+    plot(q_HR, qd_HR, 'LineWidth', 1);
     title('Right Hip');
     xlabel('q');
     ylabel('qd');
@@ -261,7 +260,7 @@ if plot_states == 1
 
     subplot(2,2,4);
     hold on; xline(0); yline(0);
-    plot(q_KR, qd_KR);
+    plot(q_KR, qd_KR, 'LineWidth', 1);
     title('Right Knee');
     xlabel('q');
     ylabel('qd');
