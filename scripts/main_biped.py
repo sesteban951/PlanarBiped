@@ -40,7 +40,7 @@ class BipedSimulation:
         
         # sim parameters
         self.sim_time = 0.0
-        self.max_sim_time = 10.0
+        self.max_sim_time = 15.0
         self.dt_sim = self.model.opt.timestep
         self.hz_render = 50
 
@@ -58,11 +58,10 @@ class BipedSimulation:
         self.v_rom = None
 
         # desired COM state
-        self.p_des = 0
-        self.v_des = 0
+        self.v_des = 0.5
 
         # phasing variables
-        self.T_SSP = 0.4
+        self.T_SSP = 0.40
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
@@ -76,9 +75,9 @@ class BipedSimulation:
         self.u = None             # foot placement w.r.t to stance foot
 
         # desired height
-        self.theta_des = -0.15 # desired torso angle
-        self.z_0 = 0.92        # LIP constant height
-        self.z_apex = 0.15     # foot apex height
+        self.theta_des = -0.2 # desired torso angle
+        self.z_0 = 0.9        # LIP constant height
+        self.z_apex = 0.1     # foot apex height
 
         # some hyperbolic trig lambda func
         self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
@@ -94,10 +93,10 @@ class BipedSimulation:
         self.u_bias = 0.0
 
         # low level joint gains
-        self.kp_H = 150
-        self.kd_H = 5
-        self.kp_K = 150
-        self.kd_K = 5
+        self.kp_H = 1000
+        self.kd_H = 50
+        self.kp_K = 1000
+        self.kd_K = 50
 
     ############################################### ROM ######################################
 
@@ -202,12 +201,12 @@ class BipedSimulation:
 
         # initial and end points
         x0 = self.p_swing_init[0][0]
-        xm = (self.p_stance[0][0] + self.u) /2
         xf = self.p_stance[0][0] + self.u
+        xm =(x0 + xf) / 2
         
         z0 = self.z_foot_offset
-        zm = (self.z_apex + self.z_foot_offset) * (16/5) 
         zf = self.z_foot_offset
+        zm = (self.z_apex + self.z_foot_offset) * (16/5) 
 
         # bezier curve points
         x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
@@ -261,26 +260,26 @@ class BipedSimulation:
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
 
         # query the location of the feet
-        # left_pos = self.data.geom_xpos[self.left_foot_id]
-        # right_pos = self.data.geom_xpos[self.right_foot_id]
-        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
-        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
+        left_pos = self.data.geom_xpos[self.left_foot_id]
+        right_pos = self.data.geom_xpos[self.right_foot_id]
+        y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
+        y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
 
-        # unpack the joint angles
-        q_HL = self.data.qpos[3]
-        q_KL = self.data.qpos[4]
-        q_HR = self.data.qpos[5]
-        q_KR = self.data.qpos[6]
+        # # unpack the joint angles
+        # q_HL = self.data.qpos[3]
+        # q_KL = self.data.qpos[4]
+        # q_HR = self.data.qpos[5]
+        # q_KR = self.data.qpos[6]
 
-        # compute the positions of the feet relative to the base frame
-        p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
-                            -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
-        p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
-                             -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
-        p_left_W = p_base_W + R @ p_left_B
-        p_right_W = p_base_W + R @ p_right_B
-        y_left_W = p_left_W
-        y_right_W = p_right_W
+        # # compute the positions of the feet relative to the base frame
+        # p_left_B = np.array([self.l1 * np.sin(q_HL) + self.l2 * np.sin(q_HL + q_KL),
+        #                     -self.l1 * np.cos(q_HL) - self.l2 * np.cos(q_HL + q_KL)]).reshape(2, 1)
+        # p_right_B = np.array([self.l1 * np.sin(q_HR) + self.l2 * np.sin(q_HR + q_KR),
+        #                      -self.l1 * np.cos(q_HR) - self.l2 * np.cos(q_HR + q_KR)]).reshape(2, 1)
+        # p_left_W = p_base_W + R @ p_left_B
+        # p_right_W = p_base_W + R @ p_right_B
+        # y_left_W = p_left_W
+        # y_right_W = p_right_W
 
         return y_base_W, y_left_W, y_right_W
 
@@ -306,16 +305,16 @@ class BipedSimulation:
         z_R = p_right_B[1][0]
 
         # compute the angles
-        # c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        # s_L = -np.sqrt(1 - c_L**2)
-        # q_KL = np.arctan2(s_L, c_L)
+        c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        s_L = -np.sqrt(1 - c_L**2)
+        q_KL = np.arctan2(s_L, c_L)
 
-        # c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        # s_R = -np.sqrt(1 - c_R**2)
-        # q_KR = np.arctan2(s_R, c_R)
+        c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+        s_R = -np.sqrt(1 - c_R**2)
+        q_KR = np.arctan2(s_R, c_R)
 
-        # q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
-        # q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
+        q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
+        q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
 
         # knee angle (Left)
         L = np.sqrt(x_L**2 + z_L**2)
@@ -486,15 +485,6 @@ class BipedSimulation:
             self.data.ctrl[1] = tau[1][0]
             self.data.ctrl[2] = tau[2][0]
             self.data.ctrl[3] = tau[3][0]
-
-            # # fixed joint state
-            # q_des  = np.array([0.5, -0.2, -0.3, -0.2])  # Initial joint positions
-            # qd_des = np.array([0.0, 0.0,  0.0, 0.0])   # Initial joint positions
-            # tau = self.compute_torques(q_des, qd_des)
-            # self.data.ctrl[0] = tau[0]
-            # self.data.ctrl[1] = tau[1]
-            # self.data.ctrl[2] = tau[2]
-            # self.data.ctrl[3] = tau[3]
 
             # update the camera to track the COM
             self.update_camera_to_com(cam)

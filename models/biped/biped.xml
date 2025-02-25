@@ -66,7 +66,7 @@
 						<joint name="knee_left" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 -0.1" damping="1.0"/>
 						
 						<!-- left foot geom -->
-						<geom name="foot_left" type="sphere" size="0.0751" pos="0 0.0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="1.5 1.5 1.5"/>
+						<geom name="foot_left" type="sphere" size="0.0751" pos="0 0.0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="0.8 0.8 0.8"/>
 
 					</body>
 				</body>
@@ -82,7 +82,7 @@
 						<joint name="knee_right" axis="0 -1 0" pos="0 0 0.0" limited="true" range="-2.0 -0.1" damping="1.0"/>
 
 						<!-- right foot geom -->
-						<geom name="foot_right" type="sphere" size="0.0751" pos="0 0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="1.5 1.5 1.5"/>
+						<geom name="foot_right" type="sphere" size="0.0751" pos="0 0 -0.5" rgba="0.2 0.2 0.2 1.0" conaffinity="1" contype="1"  friction="0.8 0.8 0.8"/>
 
 					</body>
 				</body>
@@ -93,10 +93,10 @@
 
 	<!-- actuators -->
 	<actuator>
-		<motor name="hip_left_motor" joint="hip_left" ctrllimited="false" gear="10"/>
-    	<motor name="knee_left_motor" joint="knee_left" ctrllimited="false" gear="10"/>
-		<motor name="hip_right_motor" joint="hip_right" ctrllimited="false" gear="10"/>
-		<motor name="knee_right_motor" joint="knee_right" ctrllimited="false" gear="10"/>
+		<motor name="hip_left_motor" joint="hip_left" ctrllimited="false" gear="1"/>
+    	<motor name="knee_left_motor" joint="knee_left" ctrllimited="false" gear="1"/>
+		<motor name="hip_right_motor" joint="hip_right" ctrllimited="false" gear="1"/>
+		<motor name="knee_right_motor" joint="knee_right" ctrllimited="false" gear="1"/>
 	</actuator>
 
 </mujoco>
