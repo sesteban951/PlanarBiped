@@ -3,6 +3,7 @@
 import numpy as np
 import scipy as sp
 import os
+import copy
 
 # mujoco stuff
 import mujoco
@@ -42,7 +43,7 @@ class BipedSimulation:
         self.sim_time = 0.0
         self.max_sim_time = 10.0
         self.dt_sim = self.model.opt.timestep
-        self.hz_render = 50
+        self.hz_render = 1000
 
         # model parameters
         self.z_foot_offset = 0.075 # (foot is round)
@@ -58,7 +59,7 @@ class BipedSimulation:
         self.v_rom = None
 
         # desired COM state
-        self.v_des = 0.9
+        self.v_des = 1.0
 
         # phasing variables
         self.T_SSP = 0.36
@@ -69,10 +70,10 @@ class BipedSimulation:
         self.stance_foot = None
 
         # foot position variables
-        self.p_swing_init = None # previous stance foot position
-        self.p_stance = None      # current stance foot position
-        self.p_swing = None       # current swing foot position
-        self.u = None             # foot placement w.r.t to stance foot
+        self.p_swing_init = np.zeros(2).reshape(2,1) # previous stance foot position
+        self.p_swing = np.zeros(2).reshape(2,1)      # current swing foot position
+        self.p_stance = np.zeros(2).reshape(2,1)     # current stance foot position
+        self.u = None                                # foot placement w.r.t to stance foot
 
         # desired height
         self.theta_des = -0.2 # desired torso angle
@@ -93,10 +94,10 @@ class BipedSimulation:
         self.u_bias = 0.0
 
         # low level joint gains
-        self.kp_H = 900
-        self.kd_H = 50
-        self.kp_K = 900
-        self.kd_K = 50
+        self.kp_H = 750
+        self.kd_H = 25
+        self.kp_K = 750
+        self.kd_K = 25
 
     ############################################### ROM ######################################
 
@@ -107,7 +108,7 @@ class BipedSimulation:
         self.num_steps = int(self.sim_time / self.T_SSP)
 
         # update the phase variable
-        self.T_phase = self.sim_time - self.num_steps * self.T_SSP
+        self.T_phase += self.dt_sim 
 
         # update the stance foot
         if self.num_steps % 2 == 0:
@@ -203,7 +204,7 @@ class BipedSimulation:
         x0 = self.p_swing_init[0][0]
         xf = self.p_stance[0][0] + self.u
         xm =(x0 + xf) / 2
-        
+
         z0 = self.z_foot_offset
         zf = self.z_foot_offset
         zm = (self.z_apex + self.z_foot_offset) * (16/5) 
@@ -236,15 +237,23 @@ class BipedSimulation:
         
         # define the desired foot outputs
         p_swing_W = self.compute_swing_foot_pos()
-        p_stance_W = self.p_stance
+
+        # make a deep copy of the stance foot
+        p_stance_W = copy.deepcopy(self.p_stance)
+        # p_stance_W = self.p_stance
 
         # compute the desired foot outputs
         if self.stance_foot == "L":
             y_left_des_W = p_stance_W
             y_right_des_W = p_swing_W
+
         elif self.stance_foot == "R":
             y_left_des_W = p_swing_W
             y_right_des_W = p_stance_W
+
+        # if self.T_phase <= 0.012 and self.stance_foot == "L":
+            
+        #     print(p_swing_W[0][0])
 
         return y_base_des_W, y_left_des_W, y_right_des_W
 
@@ -257,12 +266,6 @@ class BipedSimulation:
         R = np.array([[np.cos(theta_W), -np.sin(theta_W)],
                       [np.sin(theta_W),  np.cos(theta_W)]])
         y_base_W = np.array([p_base_W[0], p_base_W[1], [theta_W]]).reshape(3, 1)
-
-        # query the location of the feet
-        # left_pos = self.data.geom_xpos[self.left_foot_id]
-        # right_pos = self.data.geom_xpos[self.right_foot_id]
-        # y_left_W = np.array([left_pos[0], left_pos[2]]).reshape(2, 1)
-        # y_right_W = np.array([right_pos[0], right_pos[2]]).reshape(2, 1)
 
         # unpack the joint angles
         q_HL = self.data.qpos[3]
@@ -302,18 +305,6 @@ class BipedSimulation:
         z_L = p_left_B[1][0]
         x_R = p_right_B[0][0]
         z_R = p_right_B[1][0]
-
-        # compute the angles
-        # c_L = (x_L**2 + z_L**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        # s_L = -np.sqrt(1 - c_L**2)
-        # q_KL = np.arctan2(s_L, c_L)
-
-        # c_R = (x_R**2 + z_R**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
-        # s_R = -np.sqrt(1 - c_R**2)
-        # q_KR = np.arctan2(s_R, c_R)
-
-        # q_HL = np.arctan2(z_L, x_L) - np.arctan2(self.l2 * np.sin(q_KL), self.l1 + self.l2 * np.cos(q_KL)) + np.pi/2 
-        # q_HR = np.arctan2(z_R, x_R) - np.arctan2(self.l2 * np.sin(q_KR), self.l1 + self.l2 * np.cos(q_KR)) + np.pi/2
 
         # knee angle (Left)
         L = np.sqrt(x_L**2 + z_L**2)
@@ -385,6 +376,7 @@ class BipedSimulation:
     
     ############################################### AUX FUNC ######################################
 
+    # to see where the COM is in the simulation
     def update_com_visualization(self):
         p_com_flat = np.ravel(self.p_com)
         com_pos = np.array([p_com_flat[0], 0.0, p_com_flat[1]])
@@ -392,13 +384,27 @@ class BipedSimulation:
         if com_geom_id != -1:
             self.model.geom_pos[com_geom_id] = com_pos  # Update position
 
+    # to see where the foot targets are at
+    def update_foot_visualization(self, y_left_W, y_right_W):
+
+        p_left_flat = np.ravel(y_left_W)
+        p_right_flat = np.ravel(y_right_W)
+        left_pos = np.array([p_left_flat[0], 0.0, p_left_flat[1]])
+        right_pos = np.array([p_right_flat[0], -0.15, p_right_flat[1]])
+        left_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "left_vis")
+        right_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "right_vis")
+        if left_geom_id != -1:
+            self.model.geom_pos[left_geom_id] = left_pos  # Update position
+        if right_geom_id != -1:
+            self.model.geom_pos[right_geom_id] = right_pos  # Update position
+
     # Function to update the camera position to track the center of mass (CoM)
     def update_camera_to_com(self, cam):
 
         # Set camera parameters to track the CoM
-        cam.lookat[:] = [self.p_com[0][0], 0, self.p_com[1][0]]  # Make the camera look at the CoM
-        cam.distance = 3.0  # Distance from the CoM (adjust as needed)
-        cam.elevation = -10  # Camera elevation angle (adjust as needed)
+        cam.lookat[:] = [self.p_com[0][0], 0, 0.1]  # Make the camera look at the CoM
+        cam.distance = 2.0  # Distance from the CoM (adjust as needed)
+        cam.elevation = 0  # Camera elevation angle (adjust as needed)
         cam.azimuth = 90  # Camera azimuth angle (adjust as needed)
 
     ############################################### SIMULATION ######################################
@@ -471,12 +477,17 @@ class BipedSimulation:
             self.update_phase()
 
             # update the phasing variable i phase completed
-            if (self.sim_time - t_phase_reset >= self.T_SSP) or (self.sim_time == 0.0):
+            if ((self.sim_time - t_phase_reset) > self.T_SSP) or (self.sim_time == 0.0):
                 
                 # update the stance foot
                 self.update_stance_foot()
 
+                # print("-"* 50)
+                # print("updated the stance foot at time: ", self.sim_time)
+                # print("-"* 50)
+
                 # update the stance foot
+                self.T_phase = 0.0
                 t_phase_reset = self.sim_time
 
             # update the COM state
@@ -485,6 +496,18 @@ class BipedSimulation:
 
             # compute desired outputs
             y_base_des, y_left_des, y_right_des = self.update_output_des()
+
+            # if self.stance_foot == "L":
+            #     print("-"* 50)
+            #     print(self.T_phase)
+            #     print("Left Stance")
+            #     print(y_left_des[0][0])
+
+            # if self.stance_foot == "R":
+            #     print("-"* 50)
+            #     print(self.T_phase)
+            #     print("Right Stance")
+            #     print(y_right_des[0][0])
 
             # compute the inverse kinematics
             q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
@@ -504,8 +527,9 @@ class BipedSimulation:
             # update the camera to track the COM
             self.update_camera_to_com(cam)
 
-            # update the COM visualization
+            # update the visualizations
             self.update_com_visualization()
+            self.update_foot_visualization(y_left_des, y_right_des)
 
             # Log the whole body data
             with open(time_file_path, 'a') as f:
