@@ -10,3 +10,7 @@ Bezier package:
 pip install bezier
 ```
 
+YAML package:
+```bash
+pip install pyyaml
+```

@@ -1,0 +1,72 @@
+#################################################################
+# Config file for our simulations
+#################################################################
+
+# Simulation parameters
+SIM:
+    # Total Simulation time
+    sim_time: 10.0
+
+    # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
+    hz_render: 50
+
+#################################################################
+
+# initial conditions
+INIT:
+
+    # Initial position of the robot
+    q0: [0.0, 1.1,            # position x and z 
+         0.0,                 # theta body
+         0.0, 0.0, 0.0, 0.0]  # q_HL, q_KL, q_HR, q_KR
+    
+    # Initial velocity of the robot
+    v0: [0.0, 0.0,           
+         0.0,
+         0.0, 0.0, 0.0, 0.0]
+
+#################################################################
+
+# HLIP parameters
+HLIP:
+
+    # desired velocity
+    v_des: 0.5
+
+    # sinslge support phase length
+    T_SSP: 0.4
+
+    # desired torso config
+    theta_des: -0.2 # desired torso angle
+    z0: 0.9         # desired COM height
+
+    # desired foot config
+    z_apex: 0.1         # foot apex height
+    z_foot_offset: 0.0  # foot offset from ground
+
+    # foot placement controller bias
+    u_bias: 0.0
+
+#################################################################
+
+# Gains
+GAINS:
+    
+    # hip torques
+    kp_H: 750.0
+    kd_H: 25.0
+
+    # knee torques
+    kp_K: 750.0
+    kd_K: 25.0
+
+#################################################################
+
+# camera settings
+CAMERA:
+    # camera distance
+    distance: 3.0
+
+    # cmaera orientation
+    elevation: -10.0
+    azimuth: 90

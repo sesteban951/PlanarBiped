@@ -11,7 +11,9 @@ params.l0 = l0;
 params.l1 = l1;
 params.l2 = l2;
 
-animation = 0;
+% animation = 1 means animate the robot
+% animation = 0 means plot the joint angles
+animation = 1;
 
 % syntehsize a joint trajectory for the robot
 t = 0: 0.025 : 7.0;

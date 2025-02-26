@@ -12,13 +12,16 @@ import glfw
 # bezier stuff
 import bezier
 
+# yaml stuff
+import yaml
+
 ####################################################################################
 # Biped Simulation
 ####################################################################################
 
 class BipedSimulation:
 
-    def __init__(self):
+    def __init__(self, config):
         
         # load the model
         xml_path = "../models/biped/biped.xml"
@@ -26,12 +29,8 @@ class BipedSimulation:
         self.data = mujoco.MjData(self.model)
 
         # initial state
-        qpos = np.array([0.0, 1.1,                # position x and z 
-                         0.0,                     # theta body
-                         0.0, 0.0, 0.0, 0.0])  # left thigh, left knee, right thigh, right knee
-        qvel = np.array([0.0, 0.0, 
-                         0.0, 
-                         0.0, 0.0,  0.0, 0.0])  
+        qpos = np.array([config["INIT"]["q0"]])
+        qvel = np.array([config["INIT"]["v0"]])
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
 
@@ -41,14 +40,13 @@ class BipedSimulation:
         
         # sim parameters
         self.sim_time = 0.0
-        self.max_sim_time = 10.0
+        self.max_sim_time = config["SIM"]["sim_time"]
         self.dt_sim = self.model.opt.timestep
-        self.hz_render = 1000
+        self.hz_render = config["SIM"]["hz_render"]
 
         # model parameters
-        self.z_foot_offset = 0.075 # (foot is round)
-        self.l1 = 0.5 # length of the thigh
-        self.l2 = 0.5 # length of the shank
+        self.l1 = 0.5 # length of the thigh (check that this matches the XML file)
+        self.l2 = 0.5 # length of the shin  (check that this matches the XML file)
 
         # center of mass state
         self.p_com = None
@@ -59,10 +57,10 @@ class BipedSimulation:
         self.v_rom = None
 
         # desired COM state
-        self.v_des = 1.0
+        self.v_des = config["HLIP"]["v_des"]
 
         # phasing variables
-        self.T_SSP = 0.36
+        self.T_SSP = config["HLIP"]["T_SSP"]
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
@@ -76,9 +74,10 @@ class BipedSimulation:
         self.u = None                                # foot placement w.r.t to stance foot
 
         # desired height
-        self.theta_des = -0.2 # desired torso angle
-        self.z_0 = 0.9        # LIP constant height
-        self.z_apex = 0.1     # foot apex height
+        self.theta_des = config["HLIP"]["theta_des"]   # desired torso angle
+        self.z_0 = config["HLIP"]["z0"]                      # LIP constant height
+        self.z_apex = config["HLIP"]["z_apex"]               # foot apex height
+        self.z_foot_offset = config["HLIP"]["z_foot_offset"] # (foot is round)
 
         # some hyperbolic trig lambda func
         self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
@@ -91,13 +90,18 @@ class BipedSimulation:
         self.Kp_db = 1
         self.Kd_db = self.T_DSP + (1/self.lam) * self.coth(self.lam * self.T_SSP)
         self.sigma_P1 = self.lam * self.coth(0.5 * self.lam * self.T_SSP)
-        self.u_bias = 0.0
+        self.u_bias = config["HLIP"]["u_bias"]
 
         # low level joint gains
-        self.kp_H = 750
-        self.kd_H = 25
-        self.kp_K = 750
-        self.kd_K = 25
+        self.kp_H = config["GAINS"]["kp_H"]
+        self.kd_H = config["GAINS"]["kd_H"]
+        self.kp_K = config["GAINS"]["kp_K"]
+        self.kd_K = config["GAINS"]["kd_K"]
+
+        # camera settings
+        self.cam_distance = config["CAMERA"]["distance"]
+        self.cam_elevation = config["CAMERA"]["elevation"]
+        self.cam_azimuth = config["CAMERA"]["azimuth"]
 
     ############################################### ROM ######################################
 
@@ -121,6 +125,8 @@ class BipedSimulation:
 
         # compute the forward kinematics
         _, y_left_W, y_right_W = self.compute_forward_kinematics()
+
+        # TODO: super annoying bug still needs to be solved
 
         # based on the phase variable, assign stance foot position
         if self.stance_foot == "L":
@@ -203,7 +209,7 @@ class BipedSimulation:
         # initial and end points
         x0 = self.p_swing_init[0][0]
         xf = self.p_stance[0][0] + self.u
-        xm =(x0 + xf) / 2
+        xm =(x0 + xf) * 0.5
 
         z0 = self.z_foot_offset
         zf = self.z_foot_offset
@@ -250,10 +256,6 @@ class BipedSimulation:
         elif self.stance_foot == "R":
             y_left_des_W = p_swing_W
             y_right_des_W = p_stance_W
-
-        # if self.T_phase <= 0.012 and self.stance_foot == "L":
-            
-        #     print(p_swing_W[0][0])
 
         return y_base_des_W, y_left_des_W, y_right_des_W
 
@@ -402,10 +404,7 @@ class BipedSimulation:
     def update_camera_to_com(self, cam):
 
         # Set camera parameters to track the CoM
-        cam.lookat[:] = [self.p_com[0][0], 0, 0.1]  # Make the camera look at the CoM
-        cam.distance = 2.0  # Distance from the CoM (adjust as needed)
-        cam.elevation = 0  # Camera elevation angle (adjust as needed)
-        cam.azimuth = 90  # Camera azimuth angle (adjust as needed)
+        cam.lookat[:] = [self.p_com[0][0], 0, self.p_com[1][0]]  # Make the camera look at the CoM
 
     ############################################### SIMULATION ######################################
 
@@ -456,6 +455,11 @@ class BipedSimulation:
         cam = mujoco.MjvCamera()
         opt = mujoco.MjvOption()
 
+        # set the camera attributes
+        cam.distance = self.cam_distance
+        cam.elevation = self.cam_elevation
+        cam.azimuth = self.cam_azimuth
+
         # Set up scene and context for rendering
         self.scene = mujoco.MjvScene(self.model, maxgeom=10000)
         self.context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
@@ -478,17 +482,13 @@ class BipedSimulation:
 
             # update the phasing variable i phase completed
             if ((self.sim_time - t_phase_reset) > self.T_SSP) or (self.sim_time == 0.0):
-                
-                # update the stance foot
-                self.update_stance_foot()
-
-                # print("-"* 50)
-                # print("updated the stance foot at time: ", self.sim_time)
-                # print("-"* 50)
 
                 # update the stance foot
                 self.T_phase = 0.0
                 t_phase_reset = self.sim_time
+
+                # update the stance foot
+                self.update_stance_foot()
 
             # update the COM state
             self.update_com_state()
@@ -496,18 +496,6 @@ class BipedSimulation:
 
             # compute desired outputs
             y_base_des, y_left_des, y_right_des = self.update_output_des()
-
-            # if self.stance_foot == "L":
-            #     print("-"* 50)
-            #     print(self.T_phase)
-            #     print("Left Stance")
-            #     print(y_left_des[0][0])
-
-            # if self.stance_foot == "R":
-            #     print("-"* 50)
-            #     print(self.T_phase)
-            #     print("Right Stance")
-            #     print(y_right_des[0][0])
 
             # compute the inverse kinematics
             q_left_des, q_right_des = self.compute_inverse_kinematics(y_base_des, y_left_des, y_right_des)
@@ -589,8 +577,12 @@ class BipedSimulation:
 
 if __name__ == "__main__":
     
-    biped = BipedSimulation()
+    # load the config
+    with open("../config/biped.yaml", "r") as stream:
+        config = yaml.safe_load(stream)
 
+    # create the biped simulation
+    biped = BipedSimulation(config)
+
+    # run the simulation
     biped.simulation()
-
-
