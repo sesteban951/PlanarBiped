@@ -31,18 +31,18 @@ INIT:
 HLIP:
 
     # desired velocity
-    v_des: 0.5
+    v_des: 0.0
 
     # sinslge support phase length
-    T_SSP: 0.4
+    T_SSP: 0.6
 
     # desired torso config
     theta_des: -0.2 # desired torso angle
     z0: 0.9         # desired COM height
 
     # desired foot config
-    z_apex: 0.1         # foot apex height
-    z_foot_offset: 0.0  # foot offset from ground
+    z_apex: 0.1           # foot apex height
+    z_foot_offset: 0.075  # foot offset from ground
 
     # foot placement controller bias
     u_bias: 0.0

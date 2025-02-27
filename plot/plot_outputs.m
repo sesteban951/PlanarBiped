@@ -39,8 +39,8 @@ stance = importdata(file_location + "stance.csv");
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % time window of interest
-% t_interval = [t(1), t(end)];
-t_interval = [1, 3];
+t_interval = [t(1), t(end)];
+% t_interval = [1, 3];
 idx = find(t >= t_interval(1) & t <= t_interval(2));
 
 t = t(idx);
