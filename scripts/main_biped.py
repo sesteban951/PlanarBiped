@@ -431,6 +431,10 @@ class BipedSimulation:
         t_phase_path = "../data/t_phase.csv"
         stance_path = "../data/stance.csv"
 
+        # rom state
+        rom_state_path = "../data/rom_state.csv"
+        rom_input_path = "../data/rom_input.csv"
+
         # remove the data files if they exist
         try:
             os.remove(time_file_path)
@@ -441,6 +445,10 @@ class BipedSimulation:
             os.remove(q_act_path)
             os.remove(y_des_path)
             os.remove(y_act_path)
+            os.remove(t_phase_path)
+            os.remove(stance_path)
+            os.remove(rom_state_path)
+            os.remove(rom_input_path)
         except OSError:
             pass
     
@@ -549,6 +557,12 @@ class BipedSimulation:
                     f.write("1\n")
                 elif self.stance_foot == "R":
                     f.write("0\n")
+
+            # Log the ROM state
+            with open(rom_state_path, 'a') as f:
+                f.write(f"{self.p_rom},{self.v_rom}\n")
+            with open(rom_input_path, 'a') as f:
+                f.write(f"{self.u}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)

@@ -25,7 +25,7 @@ B_S2S = exp_A_SSP_T_SSP * [-1;
 
 % LQR controller
 Q_x = diag([1, 0.1]);
-Q_u = 10000;
+Q_u = 1;
 K_lqr = -lqrd(A_S2S, B_S2S, Q_x, Q_u, 1);
 
 % deadbeat controller
