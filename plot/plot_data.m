@@ -20,11 +20,23 @@ orbit_T = 1.0;
 % time interval
 time_segment = 1;
 t_interval = [t(1), t(end)];
-% t_interval = [0, 3];
+% t_interval = [2, 3];
 
 % downsampling
 down_sample = 0;
 hz = 60;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% unload some stuff from the yaml config file
+config_file_path = "../config/biped.yaml";
+config = yaml.loadFile(config_file_path);
+
+% some parameters
+T_SSP = config.HLIP.T_SSP;
+z0_des = config.HLIP.z0;
+theta_des = config.HLIP.theta_des;
+v_des = config.HLIP.v_des;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -99,6 +111,7 @@ if plot_states == 1
     subplot(3,3,4);
     hold on; 
     plot(t, pz_base, 'LineWidth', 2);
+    yline(z0_des, 'r--', 'Target', 'LineWidth', 2);
     title('Base pz');
     xlabel('Time (s)');
     grid on;
@@ -106,6 +119,7 @@ if plot_states == 1
     subplot(3,3,7);
     hold on; 
     plot(t, theta_base, 'LineWidth', 2);
+    yline(theta_des, 'r--', 'Target', 'LineWidth', 2);
     title('Base theta');
     xlabel('Time (s)');
     grid on;
@@ -148,6 +162,7 @@ if plot_states == 1
     subplot(3,3,1);
     hold on; yline(0);
     plot(t, vx_base, 'LineWidth', 2);
+    yline(v_des, 'r--', 'Target', 'LineWidth', 2);
     title('Base vx');
     xlabel('Time (s)');
     grid on;

@@ -38,6 +38,15 @@ stance = importdata(file_location + "stance.csv");
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% unload some stuff from the yaml config file
+config_file_path = "../config/biped.yaml";
+config = yaml.loadFile(config_file_path);
+
+% some parameters
+T_SSP = config.HLIP.T_SSP;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % time window of interest
 t_interval = [t(1), t(end)];
 % t_interval = [1, 3];
@@ -66,9 +75,8 @@ q_KR = q_KR(idx);
 t_phase = t_phase(idx);
 stance = stance(idx);
 
-T_SPP = 0.36;
-n_steps = floor(t(end) / T_SPP);
-t_SSP = 0: T_SPP : n_steps*T_SPP;
+n_steps = floor(t(end) / T_SSP);
+t_SSP = 0: T_SSP : n_steps*T_SSP;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

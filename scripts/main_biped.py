@@ -78,6 +78,7 @@ class BipedSimulation:
         self.z_0 = config["HLIP"]["z0"]                      # LIP constant height
         self.z_apex = config["HLIP"]["z_apex"]               # foot apex height
         self.z_foot_offset = config["HLIP"]["z_foot_offset"] # (foot is round)
+        self.bez_deg = config["HLIP"]["bezier_deg"]               # degree of bezier curve
 
         # some hyperbolic trig lambda func
         self.coth = lambda x: (np.exp(2 * x) + 1) / (np.exp(2 * x) - 1)
@@ -102,6 +103,7 @@ class BipedSimulation:
         self.cam_distance = config["CAMERA"]["distance"]
         self.cam_elevation = config["CAMERA"]["elevation"]
         self.cam_azimuth = config["CAMERA"]["azimuth"]
+        self.pz_com_offset = config["CAMERA"]["pz_com_offset"]
 
     ############################################### ROM ######################################
 
@@ -113,6 +115,7 @@ class BipedSimulation:
 
         # update the phase variable
         self.T_phase += self.dt_sim 
+        self.T_phase = np.clip(self.T_phase, 0.0, self.T_SSP)
 
         # update the stance foot
         if self.num_steps % 2 == 0:
@@ -125,8 +128,6 @@ class BipedSimulation:
 
         # compute the forward kinematics
         _, y_left_W, y_right_W = self.compute_forward_kinematics()
-
-        # TODO: super annoying bug still needs to be solved
 
         # based on the phase variable, assign stance foot position
         if self.stance_foot == "L":
@@ -196,7 +197,9 @@ class BipedSimulation:
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
-        self.u = u_ff + u_pos + u_vel + self.u_bias
+        # self.u = u_ff + u_pos + u_vel + self.u_bias
+        # self.u = u_ff
+        self.u = 0.075
 
     ############################################### KINEMATICS ######################################
 
@@ -213,23 +216,43 @@ class BipedSimulation:
 
         z0 = self.z_foot_offset
         zf = self.z_foot_offset
-        zm = (self.z_apex + self.z_foot_offset) * (16/5) 
 
         # bezier curve points
-        x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
-        z_pts = np.array([z0, z0, z0, zm, zf, zf, zf]) # z Bezier points
+        if self.bez_deg == 5:
+            zm = (self.z_apex + self.z_foot_offset) * (8/3)
+            x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
+            z_pts = np.array([z0, z0, z0, zm, zf, zf, zf]) # z Bezier points
+        elif self.bez_deg == 7:
+            zm = (self.z_apex + self.z_foot_offset) * (16/5) 
+            x_pts = np.array([x0, x0, xm, xf,  xf]) # x Bezier points
+            z_pts = np.array([z0, z0, zm, zf,  zf]) # z Bezier points
+        
+        # bezier control points
         P = np.array([x_pts, z_pts])
 
         # want to compute this at normalized time
         t = self.T_phase / self.T_SSP
+
+        # clip t to be between 0 and 1
+        t = np.clip(t, 0.0, 1.0)
 
         # build the bezier curve
         nodes = np.asfortranarray(P)
         curve = bezier.Curve(nodes, degree=(P.shape[1]-1))
         
         # evaulate the bezier curve at time t
-        p_swing = curve.evaluate(t)
+        p_swing_bez = curve.evaluate(t)
+
+        # get the current swing foot position
+        _, y_left_W, y_right_W = self.compute_forward_kinematics()
+        if self.stance_foot == "L":
+            p_swing_act = y_right_W
+        elif self.stance_foot == "R":
+            p_swing_act = y_left_W
         
+        # convex combination of bezier and current foot position
+        p_swing = (1 - t) * p_swing_act + t * p_swing_bez
+
         return p_swing
 
     # update the desired outputs
@@ -246,7 +269,6 @@ class BipedSimulation:
 
         # make a deep copy of the stance foot
         p_stance_W = copy.deepcopy(self.p_stance)
-        # p_stance_W = self.p_stance
 
         # compute the desired foot outputs
         if self.stance_foot == "L":
@@ -391,8 +413,8 @@ class BipedSimulation:
 
         p_left_flat = np.ravel(y_left_W)
         p_right_flat = np.ravel(y_right_W)
-        left_pos = np.array([p_left_flat[0], 0.0, p_left_flat[1]])
-        right_pos = np.array([p_right_flat[0], -0.15, p_right_flat[1]])
+        left_pos = np.array([p_left_flat[0], 0.10, p_left_flat[1]])
+        right_pos = np.array([p_right_flat[0], -0.10, p_right_flat[1]])
         left_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "left_vis")
         right_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "right_vis")
         if left_geom_id != -1:
@@ -404,7 +426,7 @@ class BipedSimulation:
     def update_camera_to_com(self, cam):
 
         # Set camera parameters to track the CoM
-        cam.lookat[:] = [self.p_com[0][0], 0, self.p_com[1][0]]  # Make the camera look at the CoM
+        cam.lookat[:] = [self.p_com[0][0], 0, self.p_com[1][0] + self.pz_com_offset]  # Make the camera look at the CoM
 
     ############################################### SIMULATION ######################################
 
@@ -492,11 +514,11 @@ class BipedSimulation:
             if ((self.sim_time - t_phase_reset) > self.T_SSP) or (self.sim_time == 0.0):
 
                 # update the stance foot
-                self.T_phase = 0.0
-                t_phase_reset = self.sim_time
+                self.update_stance_foot()
 
                 # update the stance foot
-                self.update_stance_foot()
+                self.T_phase = 0.0
+                t_phase_reset = self.sim_time
 
             # update the COM state
             self.update_com_state()
