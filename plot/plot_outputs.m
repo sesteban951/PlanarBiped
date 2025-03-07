@@ -116,8 +116,8 @@ legend('Desired', 'Actual', 'Location', 'best');
 
 subplot(3, 3, 2);
 grid on; hold on;
-plot(t, y_left_des(:, 1), 'b', 'LineWidth', 2);
-plot(t, y_left_act(:, 1), 'r', 'LineWidth', 2);
+plot(t, y_left_des(:, 1), 'b.', 'LineWidth', 2);
+plot(t, y_left_act(:, 1), 'r.', 'LineWidth', 2);
 xlabel('Time [s]');
 ylabel('X Position [m]');
 title('Left px');
@@ -134,8 +134,8 @@ legend('Desired', 'Actual', 'Location', 'best');
 
 subplot(3, 3, 3);
 grid on; hold on;
-plot(t, y_right_des(:, 1), 'b', 'LineWidth', 2);
-plot(t, y_right_act(:, 1), 'r', 'LineWidth', 2);
+plot(t, y_right_des(:, 1), 'b.', 'LineWidth', 2);
+plot(t, y_right_act(:, 1), 'r.', 'LineWidth', 2);
 xlabel('Time [s]');
 ylabel('X Position [m]');
 title('Right px');
@@ -152,8 +152,8 @@ legend('Desired', 'Actual', 'Location', 'best');
 
 subplot(3, 3, 8);
 grid on; hold on;
-plot(y_left_des(:, 1), y_left_des(:, 2), 'b', 'LineWidth', 2);
-plot(y_left_act(:, 1), y_left_act(:, 2), 'r', 'LineWidth', 2);
+plot(y_left_des(:, 1), y_left_des(:, 2), 'b.', 'LineWidth', 2);
+plot(y_left_act(:, 1), y_left_act(:, 2), 'r.', 'LineWidth', 2);
 xlabel('X Position [m]');
 ylabel('Z Position [m]');
 title('Left Leg');
@@ -161,8 +161,8 @@ legend('Desired', 'Actual', 'Location', 'best');
 
 subplot(3, 3, 9);
 grid on; hold on;
-plot(y_right_des(:, 1), y_right_des(:, 2), 'b', 'LineWidth', 2);
-plot(y_right_act(:, 1), y_right_act(:, 2), 'r', 'LineWidth', 2);
+plot(y_right_des(:, 1), y_right_des(:, 2), 'b.', 'LineWidth', 2);
+plot(y_right_act(:, 1), y_right_act(:, 2), 'r.', 'LineWidth', 2);
 xlabel('X Position [m]');
 ylabel('Z Position [m]');
 title('Right Leg');

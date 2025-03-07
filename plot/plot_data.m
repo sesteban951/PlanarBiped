@@ -20,6 +20,7 @@ orbit_T = 1.0;
 % time interval
 time_segment = 1;
 t_interval = [t(1), t(end)];
+% t_interval = [t(end) - 5, t(end)];
 % t_interval = [2, 3];
 
 % downsampling

@@ -197,9 +197,7 @@ class BipedSimulation:
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
-        # self.u = u_ff + u_pos + u_vel + self.u_bias
-        # self.u = u_ff
-        self.u = 0.075
+        self.u = u_ff + u_pos + u_vel + self.u_bias
 
     ############################################### KINEMATICS ######################################
 
@@ -251,7 +249,8 @@ class BipedSimulation:
             p_swing_act = y_left_W
         
         # convex combination of bezier and current foot position
-        p_swing = (1 - t) * p_swing_act + t * p_swing_bez
+        # p_swing = (1 - t) * p_swing_act + t * p_swing_bez
+        p_swing = p_swing_bez
 
         return p_swing
 
@@ -268,7 +267,7 @@ class BipedSimulation:
         p_swing_W = self.compute_swing_foot_pos()
 
         # make a deep copy of the stance foot
-        p_stance_W = copy.deepcopy(self.p_stance)
+        p_stance_W = self.p_stance
 
         # compute the desired foot outputs
         if self.stance_foot == "L":
@@ -514,11 +513,11 @@ class BipedSimulation:
             if ((self.sim_time - t_phase_reset) > self.T_SSP) or (self.sim_time == 0.0):
 
                 # update the stance foot
-                self.update_stance_foot()
-
-                # update the stance foot
                 self.T_phase = 0.0
                 t_phase_reset = self.sim_time
+
+                # update the stance foot
+                self.update_stance_foot()
 
             # update the COM state
             self.update_com_state()

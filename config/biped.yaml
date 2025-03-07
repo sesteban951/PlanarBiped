@@ -5,10 +5,10 @@
 # Simulation parameters
 SIM:
     # Total Simulation time
-    sim_time: 3.0
+    sim_time: 30.0
 
     # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
-    hz_render: 1500
+    hz_render: 50
 
 #################################################################
 
@@ -31,7 +31,7 @@ INIT:
 HLIP:
 
     # desired velocity
-    v_des: -1.0
+    v_des: 0.0
 
     # sinslge support phase length
     T_SSP: 0.4
@@ -68,10 +68,10 @@ GAINS:
 # camera settings
 CAMERA:
     # camera distance
-    distance: 2.0
+    distance: 3.0
 
     # pz offset from COM
-    pz_com_offset: -0.8
+    pz_com_offset: -0.0
 
     # cmaera orientation
     elevation: 0.0
