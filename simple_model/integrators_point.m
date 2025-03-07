@@ -1,10 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Lower to higher dimensional integrator
+% Lower to higher dimensional integrator (Manifold)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all; clc; close all;
 
 % parameters
-params.k_single = 0.5;
+params.k_single = 0.75;
 params.kd_double = 5.0;
 
 % initial conditions
@@ -19,7 +19,7 @@ dt = 0.01;
 t = 0:dt:t_sim;
 
 % initialize the state
-[t, x] = ode45(@(t, x) dynamics_eq_pt(t, x, params), t, x0);
+[t, x] = ode45(@(t, x) dynamics(t, x, params), t, x0);
 
 % extract the states
 z = x(:, 1);
@@ -39,28 +39,28 @@ figure;
 
 % plot the tracking
 subplot(1,2,1);
-hold on; grid on;
+hold on;
 yline(0, 'k--');
-
-%  plot the solutions
 plot(t, z, 'b', 'LineWidth', 1.5);      % single integrator
 plot(t, x(:,1), 'r', 'LineWidth', 1.5); % double integrator
 legend('', 'Single', 'Double');
+grid on;
 
 % plot double integrator traj
 subplot(1,2,2);
-hold on; grid on; axis equal;
+hold on; 
 xline(0); yline(0);
-plot(x(:,1), x(:,2), 'b', 'LineWidth', 1.5);
+plot(x(:,1), x(:,2), 'r', 'LineWidth', 1.5);
 plot(M(1,:), M(2,:), 'k--', 'LineWidth', 1.5);
-legend('TraDoublejectory', 'Manifold');
+legend('', '', 'Double', 'Manifold');
 xlabel('p');
 ylabel('v');
+grid on; axis equal;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % function that does both the double and single integrator
-function xdot = dynamics_eq_pt(t, x, params)
+function xdot = dynamics(t, x, params)
 
     % unpack the state
     p_single = x(1);
