@@ -13,10 +13,11 @@ params.l2 = l2;
 
 % animation = 1 means animate the robot
 % animation = 0 means plot the joint angles
-animation = 1;
+animation = 0;
 
 % syntehsize a joint trajectory for the robot
-t = 0: 0.025 : 7.0;
+dt = 0.025;
+t = 0: dt : 7.0;
 q_t = zeros(2, length(t));
 qdot_t = zeros(2, length(t));
 
@@ -24,14 +25,14 @@ f = 0.5;
 w = 2 * pi * f;
 
 % hips
-hip_max = 1.58;
-hip_min = -1.58;
+hip_max = 1.0;
+hip_min = -1.0;
 A_hip = (hip_max - hip_min) / 2;
 hip_offset = (hip_max + hip_min) / 2;
 
 % knees
-knee_max = 0.0;
-knee_min = -1.56;
+knee_max = -0.1;
+knee_min = -1.0;
 A_knee = (knee_max - knee_min) / 2;
 knee_offset = (knee_max + knee_min) / 2;
 
@@ -59,14 +60,17 @@ end
 
 % compute the inverse kinematics
 q_t_inv = zeros(2, length(t));
+qdot_t_inv = zeros(2, length(t));
 for i = 1:length(t)
-    q_t_inv(:, i) = inv_kinematics(p_foot_t(:, i), params);
+    [q_inv, qdot_inv] = inv_kinematics(p_foot_t(:, i), v_foot_t(:,i), params);
+    q_t_inv(:, i) = q_inv;
+    qdot_t_inv(:, i) = qdot_inv;
 end
 
 % plot the joint angles
 if animation == 0
     figure('Name', 'Joint Angles');
-    subplot(2, 1, 1);
+    subplot(2, 2, 1);
     hold on; grid on;
     plot(t, q_t(1, :), 'r', 'LineWidth', 2);
     plot(t, q_t_inv(1, :), 'b', 'LineWidth', 1);
@@ -75,12 +79,30 @@ if animation == 0
     title('Hip');
     legend('Forward', 'Inverse');
 
-    subplot(2, 1, 2);
+    subplot(2, 2, 3);
     hold on; grid on;
     plot(t, q_t(2, :), 'r', 'LineWidth', 2);
     plot(t, q_t_inv(2, :), 'b', 'LineWidth', 1);
     xlabel('Time (s)');
     ylabel('Joint Angle (rad)');
+    title('Knee');
+    legend('Forward', 'Inverse');
+
+    subplot(2, 2, 2);
+    hold on; grid on;
+    plot(t, qdot_t(1, :), 'r', 'LineWidth', 2);
+    plot(t, qdot_t_inv(1, :), 'b', 'LineWidth', 1);
+    xlabel('Time (s)');
+    ylabel('Joint Velocity (rad/s)');
+    title('Hip');
+    legend('Forward', 'Inverse');
+
+    subplot(2, 2, 4);
+    hold on; grid on;
+    plot(t, qdot_t(2, :), 'r', 'LineWidth', 2);
+    plot(t, qdot_t_inv(2, :), 'b', 'LineWidth', 1);
+    xlabel('Time (s)');
+    ylabel('Joint Velocity (rad/s)');
     title('Knee');
     legend('Forward', 'Inverse');
 end
@@ -170,7 +192,7 @@ function [p_knee, p_foot, v_foot] = fwd_kinmeatics(q, qdot, params)
     v_foot = J * qdot;
 end
 
-function q_sol = inv_kinematics(p_foot_des, params)
+function [q_sol, qdot_sol] = inv_kinematics(p_foot_des, pdot_foot_des, params)
     % Extract link lengths
     l1 = params.l1;
     l2 = params.l2;
@@ -178,6 +200,8 @@ function q_sol = inv_kinematics(p_foot_des, params)
     % Extract desired foot position
     x = p_foot_des(1);
     z = p_foot_des(2);
+    xdot = pdot_foot_des(1);
+    zdot = pdot_foot_des(2);
 
     % Chat GPT
     % Compute q2 using the law of cosines
@@ -207,4 +231,17 @@ function q_sol = inv_kinematics(p_foot_des, params)
     
     % solution 
     q_sol = [q1; q2];
+
+    % compute the q2 joint velocity
+    u = (L^2 - (l1^2 + l2^2)) / (-2 * l1 * l2);
+    qdo2_sqrt = sqrt(1 - u^2);
+    qdot2 = (x * xdot + z * zdot) / (l1 * l2 * qdo2_sqrt);
+
+    % compute the q1 joint velocity
+    u = (l2^2 - l1^2 - L^2) / (-2 * l1 * L);
+    qdot1_term1 = (x * zdot - z * xdot) / L^2;
+    qdot1_term2 = (x * xdot + z * zdot) * (L^2 + l2^2 - l1^2) / (2 * l1 * L^3 * sqrt(1 - u^2));
+    qdot1 = qdot1_term1 - qdot1_term2;
+
+    qdot_sol = [qdot1; qdot2];
 end
