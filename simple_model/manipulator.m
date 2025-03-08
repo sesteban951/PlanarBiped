@@ -8,30 +8,34 @@ params.m1 = 1.0;        % mass of link 1
 params.m2 = 1.0;        % mass of link 2
 params.l1 = 1.0;        % length of link 1
 params.l2 = 1.0;        % length of link 2
-params.b1 = 0.1;        % damping
-params.b2 = 0.1;        % damping
+params.b1 = 0.05;        % damping
+params.b2 = 0.05;        % damping
 params.g = 9.81;        % gravity
 
 % manipulator gains
-params.kp = 100.0;      % proportional gain for the manipulator
-params.kd = 15.0;       % derivative gain for the manipulator
+params.kp = 75.0;         % proportional gain for the manipulator
+params.kd = 25.0;         % derivative gain for the manipulator
 
 % single integrator parameters
-params.k_single = 5.0; % gain of the single integrator
+params.k_single = 15.0; % gain of the single integrator
 
 % desired trajectory (periodic ellipsoid trajectory)
 params.rx = 0.25;        % radius x of the circle
 params.rz = 0.5;         % radius z of the circle
 params.c = [0.75; -1.0]; % center of the circle
-params.T = 2.5;          % period of the circle
+params.T = 3.0;          % period of the circle
 
-% initial condition of the Single Integrator
-z0 = [0.0;  % px single integrator
-      0.0]; % pz single integrator
+% flag to use the ROM framework or not
+params.use_rom = 1; % 1 = use ROM (track single integrator (which tracks traj) by joint velocity control) 
+                    % 0 = no ROM  (directly try to track the desired hand trajectory, using joint PD)
+
+% initial condition of the Single Integrator (start at center of circle)
+z0 = [params.c(1);  % px single integrator
+      params.c(2)]; % pz single integrator
 
 % initial condition of the manipulator
-x0 = [0.0;  % q1
-      0.0;  % q2
+x0 = [1.5;  % q1
+      -1.5;  % q2
       0.0;  % q1dot
       0.0]; % q2dot
 
@@ -40,12 +44,12 @@ x0 = [0.0;  % q1
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % simulation
-t_sim = 5.0;        % simulation time
+t_sim = 10.0;        % simulation time
 dt = 0.025;         % simualtion dt
 tspan = 0:dt:t_sim; 
 
 % simulate the dynamics
-x_init = [x0; z0];
+x_init = [z0; x0];
 [t, x] = ode45(@(t, x) dynamics(t, x, params), tspan, x_init);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,13 +64,21 @@ x_manip = x(:, 3:6);
 q = x_manip(:, 1:2);
 qdot = x_manip(:, 3:4);
 
-% precompute all the elbow and hand positions
+% precompute all the elbow and hand position and velocities
 p_elbow = zeros(length(t), 2);
 p_hand = zeros(length(t), 2);
+pdot_hand = zeros(length(t), 2);
 for i = 1:length(t)
-    [p_elbow_, p_hand_] = forward_kin(q(i,:), params);
+
+    % joint states at time t
+    q_t = q(i,:)';
+    qdot_t = qdot(i,:)';
+
+    % compute the forward kinematics
+    [p_elbow_, p_hand_, pdot_hand_] = forward_kin(q_t, qdot_t, params);
     p_elbow(i,:) = p_elbow_';
     p_hand(i,:) = p_hand_';
+    pdot_hand(i,:) = pdot_hand_';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,7 +87,7 @@ end
 
 % plot the results
 figure('Name', 'States');
-set(gcf, 'WindowState', 'maximized');
+% set(gcf, 'WindowState', 'maximized');
 
 subplot(2,2,1);
 hold on; grid on;
@@ -177,38 +189,59 @@ end
 % FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% manipulator dynamics
+% all system dynamics
 function xdot = dynamics(t, x, params)
 
-    % get the current desired output
+    % get the current desired hand position
     omega = 2 * pi / params.T;    % angular frequency
     p_hand_des = [params.rx * cos(omega * t) + params.c(1);
                   params.rz * sin(omega * t) + params.c(2)];
+    pdot_hand_des = [-params.rx * omega * sin(omega * t);
+                      params.rz * omega * cos(omega * t)];
 
     % Single Integrator dynamics
     z = [x(1); x(2)]; % position of the single integrator
 
     % compute the control input of the single integrator
-    v = [params.k_single * (p_hand_des(1) - z(1));
-         params.k_single * (p_hand_des(2) - z(2))];
+    v = [-params.k_single * (z(1) - p_hand_des(1));
+         -params.k_single * (z(2) - p_hand_des(2))];
 
-    % unpack the state
+    % unpack the manipulator state
     x_manip = x(3:6); % joint states of the manipulator
     q    = [x_manip(1); x_manip(2)];  % joint angles
     qdot = [x_manip(3); x_manip(4)];  % joint velocities
 
-    % compute the inverse kinematics to get desired joint angles
-    q_des = inverse_kin(p_hand_des, params);
+    % use reduced order model input
+    if params.use_rom == 1
 
-    % compute the control input
-    u1 = -params.kp * (q(1) - q_des(1)) - params.kd * (qdot(1) - 0);
-    u2 = -params.kp * (q(2) - q_des(2)) - params.kd * (qdot(2) - 0);
-    u = [u1; u2];
+        % compute the forward kineamtics to get the ROM states
+        [~, p_hand, ~] = forward_kin(q, qdot, params);
+        z_ = p_hand;
+        v_ = [-params.k_single * (z_(1) - p_hand_des(1));
+              -params.k_single * (z_(2) - p_hand_des(2))];
 
-    % get the manipulator equations
+        % compute IK using the single integrator position
+        % [~, qdot_des] = inverse_kin(z, v, params);  % (this one is wrong?)
+        [~, qdot_des] = inverse_kin(z_, v_, params);
+
+        % compute joint torques
+        u1 = - params.kd * (qdot(1) - qdot_des(1));
+        u2 = - params.kd * (qdot(2) - qdot_des(2));
+        u = [u1; u2];
+        
+    % use naive control input (no ROM)
+    else
+        % compute IK using the desired hand position directly
+        [q_des, qdot_des] = inverse_kin(p_hand_des, pdot_hand_des, params);
+
+        % compute joint torques
+        u1 = -params.kp * (q(1) - q_des(1)) - params.kd * (qdot(1) - qdot_des(1));
+        u2 = -params.kp * (q(2) - q_des(2)) - params.kd * (qdot(2) - qdot_des(2));
+        u = [u1; u2];
+    end
+
+    % compute the manipulator dynamics
     [D, C, G, B] = manipulator_eqs(q, qdot, params);
-
-    % compute the dynamics
     qddot = D \ (-C * qdot - G + B * u);
 
     % return the whole system dynamics
@@ -218,7 +251,7 @@ function xdot = dynamics(t, x, params)
 end
 
 % forward kinematics of the manipulator
-function [p_elbow, p_hand] = forward_kin(q, params)
+function [p_elbow, p_hand, pdot_hand] = forward_kin(q, qdot, params)
 
     % unpack the params
     l1 = params.l1;
@@ -231,10 +264,14 @@ function [p_elbow, p_hand] = forward_kin(q, params)
     % compute the hand position
     p_hand = [l1 * sin(q(1)) + l2 * sin(q(1) + q(2));
              -l1 * cos(q(1)) - l2 * cos(q(1) + q(2))];
+
+    % compute the hand velocity
+    J = manipulator_jacobian(q, params);
+    pdot_hand = J * qdot;
 end
 
 % inverse kinematics of the manipulator
-function q_sol = inverse_kin(p_hand_des, params)
+function [q_sol, qdot_sol] = inverse_kin(p_hand_des, pdot_hand_des, params)
 
     % unpack the params
     l1 = params.l1;
@@ -247,19 +284,38 @@ function q_sol = inverse_kin(p_hand_des, params)
 
     % elbow angle (be aware that there are two solutions, elbow up and elbow down)
     gamma = acos((L^2 - l1^2 - l2^2) / (-2 * l1 * l2));
-    q2 = pi - gamma;
-    q2 = -q2;
+    q2 = gamma - pi;
     
     % shoulder angle
     beta = atan2(x, -z);
     alpha = acos((l2^2 - l1^2 - L^2) / (-2 * l1 * L));
     q1 = beta + alpha;
     
-    % solution 
+    % IK solution 
     q_sol = [q1; q2];
+
+    % compute the joint velocities via inverse Jacobian
+    J = manipulator_jacobian(q_sol, params);
+    qdot_sol = J \ pdot_hand_des;
 end
 
-% get the robot equations, D(q) * qddot + C(q, qdot) * qdot + G(q) = B * u
+% manipulator jacobian
+function J = manipulator_jacobian(q, params)
+
+    % extract the params
+    l1 = params.l1;
+    l2 = params.l2;
+
+    % extract the joint angles
+    q1 = q(1);
+    q2 = q(2);
+
+    % compute the jacobian
+    J = [l1 * cos(q1) + l2 * cos(q1 + q2), l2 * cos(q1 + q2);
+         l1 * sin(q1) + l2 * sin(q1 + q2), l2 * sin(q1 + q2)];
+end
+
+% compute the robot equations, D(q) * qddot + C(q, qdot) * qdot + G(q) = B * u
 % https://underactuated.csail.mit.edu/acrobot.html
 function [D, C, G, B] = manipulator_eqs(q, qdot, params)
 
@@ -309,6 +365,7 @@ function [D, C, G, B] = manipulator_eqs(q, qdot, params)
     G = -[G1;
           G2];
 
+    % compute the input matrix
     B = [1, 0;
          0, 1];
 end
