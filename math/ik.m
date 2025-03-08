@@ -232,16 +232,21 @@ function [q_sol, qdot_sol] = inv_kinematics(p_foot_des, pdot_foot_des, params)
     % solution 
     q_sol = [q1; q2];
 
-    % compute the q2 joint velocity
-    u = (L^2 - (l1^2 + l2^2)) / (-2 * l1 * l2);
-    qdo2_sqrt = sqrt(1 - u^2);
-    qdot2 = (x * xdot + z * zdot) / (l1 * l2 * qdo2_sqrt);
+    % % compute the q2 joint velocity
+    % u = (L^2 - (l1^2 + l2^2)) / (-2 * l1 * l2);
+    % qdo2_sqrt = sqrt(1 - u^2);
+    % qdot2 = (x * xdot + z * zdot) / (l1 * l2 * qdo2_sqrt);
 
-    % compute the q1 joint velocity
-    u = (l2^2 - l1^2 - L^2) / (-2 * l1 * L);
-    qdot1_term1 = (x * zdot - z * xdot) / L^2;
-    qdot1_term2 = (x * xdot + z * zdot) * (L^2 + l2^2 - l1^2) / (2 * l1 * L^3 * sqrt(1 - u^2));
-    qdot1 = qdot1_term1 - qdot1_term2;
+    % % compute the q1 joint velocity
+    % u = (l2^2 - l1^2 - L^2) / (-2 * l1 * L);
+    % qdot1_term1 = (x * zdot - z * xdot) / L^2;
+    % qdot1_term2 = (x * xdot + z * zdot) * (L^2 + l2^2 - l1^2) / (2 * l1 * L^3 * sqrt(1 - u^2));
+    % qdot1 = qdot1_term1 - qdot1_term2;
 
-    qdot_sol = [qdot1; qdot2];
+    % compute joint velocities by Jacobian
+    J = [l1 * cos(q1) + l2 * cos(q1 + q2), l2 * cos(q1 + q2);
+         l1 * sin(q1) + l2 * sin(q1 + q2), l2 * sin(q1 + q2)];
+    qdot_sol = J \ [xdot; zdot];
+
+    % qdot_sol = [qdot1; qdot2];
 end
