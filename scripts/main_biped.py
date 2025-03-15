@@ -3,6 +3,7 @@
 import numpy as np
 import scipy as sp
 import os
+import pygame
 
 # mujoco stuff
 import mujoco
@@ -26,6 +27,13 @@ class BipedSimulation:
         xml_path = "../models/biped/biped.xml"
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
+
+        # joystick stuff
+        self.joystick = None
+        self.joystick_available = None
+        self.joystick_deadzone = config["JOYSTICK"]["deadzone"]
+        self.v_max = config["JOYSTICK"]["v_max"]
+        self.v_min = config["JOYSTICK"]["v_min"]
 
         # initial state
         qpos = np.array([config["INIT"]["q0"]])
@@ -56,7 +64,8 @@ class BipedSimulation:
         self.v_rom = 0.0
 
         # desired COM state
-        self.v_des = config["HLIP"]["v_des"]
+        self.v_joystick = 0.0
+        self.v_des_const = config["HLIP"]["v_des"]
 
         # phasing variables
         self.T_SSP = config["HLIP"]["T_SSP"]
@@ -109,6 +118,23 @@ class BipedSimulation:
         self.cam_elevation = config["CAMERA"]["elevation"]
         self.cam_azimuth = config["CAMERA"]["azimuth"]
         self.pz_com_offset = config["CAMERA"]["pz_com_offset"]
+
+    ############################################### JOY ######################################
+
+    # update the joystick command
+    def update_joystick(self):
+        
+        # get the joystick axis
+        pygame.event.pump()
+        self.joystick_axis = -self.joystick.get_axis(1)
+        
+        # joystick is within deadzone, set to zero
+        if abs(self.joystick_axis) < self.joystick_deadzone:
+            self.v_joystick = 0.0
+
+        # scale joystick to within velocity range
+        else:
+            self.v_joystick = ((self.v_max - self.v_min) / 2) * self.joystick_axis
 
     ############################################### ROM ######################################
 
@@ -196,9 +222,17 @@ class BipedSimulation:
     # compute the foot placement based on Raibert
     def compute_foot_placement(self):
 
+        # compute the desired velocity
+        if self.joystick_available == True:
+            v_des = self.v_joystick
+        else:
+            v_des = self.v_des_const
+
+        print(f"v_des: {v_des:.3f}")
+
         # compute the desired preimpact HLIP state
-        p_minus_H = (self.v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
-        v_minus_H = self.sigma_P1 * (self.v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
+        p_minus_H = (v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
+        v_minus_H = self.sigma_P1 * (v_des * self.T_tot) / (2 + self.T_DSP * self.sigma_P1)
 
         # compute the predicted preimpact state of the robot
         x_R = np.array([self.p_rom, self.v_rom]).reshape(2, 1)
@@ -207,7 +241,7 @@ class BipedSimulation:
         v_minus_R = x_minus_R[1][0]
 
         # compute the foot placement relative to the stance foot
-        u_ff = self.v_des * self.T_SSP
+        u_ff = v_des * self.T_SSP
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
@@ -234,9 +268,10 @@ class BipedSimulation:
             zm = (self.z_apex + self.z_foot_offset) * (8/3) 
             x_pts = np.array([x0, x0, xm, xf, xf]) # x Bezier points
             z_pts = np.array([z0, z0, zm, zf, zf]) # z Bezier points
+
         elif self.bez_deg == 7:
             zm = (self.z_apex + self.z_foot_offset) * (16/5)
-            x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
+            x_pts = np.array([x0, x0, x0, xm, xm, xf, xf]) # x Bezier points
             z_pts = np.array([z0, z0, z0, zm, zf, zf, zf]) # z Bezier points
         
         # bezier control points
@@ -471,6 +506,9 @@ class BipedSimulation:
         rom_state_path = "../data/rom_state.csv"
         rom_input_path = "../data/rom_input.csv"
 
+        # command data
+        command_path = "../data/command.csv"
+
         # remove the data files if they exist
         try:
             os.remove(time_file_path)
@@ -487,6 +525,7 @@ class BipedSimulation:
             os.remove(rom_input_path)
             os.remove(stance_foot_path)
             os.remove(swing_init_path)
+            os.remove(command_path)
         except OSError:
             pass
     
@@ -514,8 +553,16 @@ class BipedSimulation:
         frame_skip = round(1 / (self.hz_render * self.dt_sim))  # Only render every so number of steps
         step_counter = 0    # Frame counter
 
-        # to keep track of phase
-        t_phase_reset = 0.0
+        # look if there are any game controller connected
+        pygame.init()
+        pygame.joystick.init()
+        num_joysticks = pygame.joystick.get_count()
+        if num_joysticks == 0:
+            self.joystick_available = False
+        else:
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
+            self.joystick_available = True
 
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
@@ -524,6 +571,10 @@ class BipedSimulation:
             self.sim_time = self.data.time
             print("*" * 20)
             print(f"t_sim: {self.sim_time:.3f}")
+
+            # update the joystick velocity
+            if self.joystick_available == True:
+                self.update_joystick()
 
             # update phasing variables
             self.update_phase()
@@ -597,6 +648,13 @@ class BipedSimulation:
                 f.write(f"{self.p_rom},{self.v_rom}\n")
             with open(rom_input_path, 'a') as f:
                 f.write(f"{self.u}\n")
+
+            # Log the command data
+            with open(command_path, 'a') as f:
+                if self.joystick_available == True:
+                    f.write(f"{self.v_joystick}\n")
+                else:
+                    f.write(f"{self.v_des_const}\n")
 
             # Step the simulation
             mujoco.mj_step(self.model, self.data)
