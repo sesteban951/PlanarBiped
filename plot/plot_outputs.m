@@ -178,6 +178,7 @@ grid on; hold on;
 plot(t, q_HL_des, 'b', 'LineWidth', 2);
 plot(t, q_HL, 'r', 'LineWidth', 2);
 xlabel('Time [s]');
+ylabel('q [rad]');
 title('Left Hip');
 legend('Desired', 'Actual');
 
@@ -186,6 +187,7 @@ grid on; hold on;
 plot(t, q_KL_des, 'b', 'LineWidth', 2);
 plot(t, q_KL, 'r', 'LineWidth', 2);
 xlabel('Time [s]');
+ylabel('q [rad]');
 title('Left Knee');
 legend('Desired', 'Actual');
 
@@ -194,6 +196,7 @@ grid on; hold on;
 plot(t, q_HR_des, 'b', 'LineWidth', 2);
 plot(t, q_HR, 'r', 'LineWidth', 2);
 xlabel('Time [s]');
+ylabel('q [rad]');
 title('Right Hip');
 legend('Desired', 'Actual');
 
@@ -202,7 +205,8 @@ grid on; hold on;
 plot(t, q_KR_des, 'b', 'LineWidth', 2);
 plot(t, q_KR, 'r', 'LineWidth', 2);
 xlabel('Time [s]');
-title('Right Knee');
+ylabel('q [rad]');
+title('Right Knee,');
 legend('Desired', 'Actual');
 
 tab_phase = uitab(tabgroup, 'Title', 'Phase');

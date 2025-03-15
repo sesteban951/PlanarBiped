@@ -25,9 +25,6 @@ g = 9.81;
 T_SSP = config.HLIP.T_SSP;
 z0_des = config.HLIP.z0;
 
-
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % time window of interest

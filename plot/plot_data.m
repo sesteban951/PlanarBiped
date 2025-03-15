@@ -9,6 +9,7 @@ t = importdata(file_location + "time.csv");
 pos = importdata(file_location + "pos.csv");
 vel = importdata(file_location + "vel.csv");
 tau = importdata(file_location + "tau.csv");
+commands = importdata(file_location + "command.csv");
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -37,7 +38,6 @@ config = yaml.loadFile(config_file_path);
 T_SSP = config.HLIP.T_SSP;
 z0_des = config.HLIP.z0;
 theta_des = config.HLIP.theta_des;
-v_des = config.HLIP.v_des;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -163,9 +163,10 @@ if plot_states == 1
     subplot(3,3,1);
     hold on; yline(0);
     plot(t, vx_base, 'LineWidth', 2);
-    yline(v_des, 'r--', 'Target', 'LineWidth', 2);
+    plot(t, commands, 'k--', 'LineWidth', 2);
     title('Base vx');
     xlabel('Time (s)');
+    legend('', 'vx', 'command');
     grid on;
 
     subplot(3,3,4);

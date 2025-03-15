@@ -5,7 +5,7 @@
 # Simulation parameters
 SIM:
     # Total Simulation time
-    sim_time: 9.0
+    sim_time: 25.0
 
     # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
     hz_render: 50
@@ -30,7 +30,7 @@ INIT:
 # HLIP parameters
 HLIP:
 
-    # desired velocity
+    # constant desired velocity (when no joystick)
     v_des: 1.0
 
     # sinslge support phase length
@@ -45,13 +45,25 @@ HLIP:
     z_foot_offset: 0.075  # foot offset from ground
 
     # foot placement controller bias
-    u_bias: -0.03
+    u_bias: -0.0
 
     # bezier curve degree
-    bezier_deg: 5 # either 5 or 7
+    bezier_deg: 7 # either 5 or 7
 
     # blend foot trajectory
     blend_foot_traj: False
+
+#################################################################
+
+# joystick parameters
+JOYSTICK:
+
+    # max speed for joystick
+    v_max: 1.0
+    v_min: -1.0
+
+    # deadzone
+    deadzone: 0.05
 
 #################################################################
 
@@ -60,11 +72,11 @@ GAINS:
     
     # hip torques
     kp_H: 750.0
-    kd_H: 30.0
+    kd_H: 50.0
 
     # knee torques
     kp_K: 750.0
-    kd_K: 30.0
+    kd_K: 50.0
 
 #################################################################
 
@@ -74,7 +86,7 @@ CAMERA:
     distance: 3.0
 
     # pz offset from COM
-    pz_com_offset: 0.0
+    pz_com_offset: -0.0
 
     # cmaera orientation
     elevation: 0.0
