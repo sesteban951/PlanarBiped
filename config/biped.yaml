@@ -5,10 +5,10 @@
 # Simulation parameters
 SIM:
     # Total Simulation time
-    sim_time: 30.0
+    sim_time: 3.0
 
     # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
-    hz_render: 50
+    hz_render: 500
 
 #################################################################
 
@@ -71,7 +71,7 @@ CAMERA:
     distance: 3.0
 
     # pz offset from COM
-    pz_com_offset: -0.0
+    pz_com_offset: -0.8
 
     # cmaera orientation
     elevation: 0.0

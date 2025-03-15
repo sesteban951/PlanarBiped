@@ -64,8 +64,11 @@ class BipedSimulation:
         self.T_DSP = 0.0
         self.T_tot = self.T_SSP + self.T_DSP
         self.T_phase = 0.0
-        self.num_steps = 0
         self.stance_foot = None
+
+        # switch flags
+        self.num_steps = 0
+        self.num_steps_prev = None
 
         # foot position variables
         self.p_swing_init = np.zeros(2).reshape(2,1) # previous stance foot position
@@ -111,20 +114,27 @@ class BipedSimulation:
     def update_phase(self):
 
         # compute the number of steps taken so far
-        self.num_steps = int(self.sim_time / self.T_SSP)
+        self.num_steps = np.floor(self.sim_time / self.T_SSP)
 
         # update the phase variable
         self.T_phase += self.dt_sim 
         self.T_phase = np.clip(self.T_phase, 0.0, self.T_SSP)
+
+        # update the stance if the number of steps has changed
+        if self.num_steps_prev != self.num_steps:
+            
+            # update the stance and swing feet info
+            self.update_stance_foot()
+            self.num_steps_prev = self.num_steps
+
+    # update which foot is swing and stance
+    def update_stance_foot(self):
 
         # update the stance foot
         if self.num_steps % 2 == 0:
             self.stance_foot = "L"
         else:
             self.stance_foot = "R"
-
-    # update which foot is swing and stance
-    def update_stance_foot(self):
 
         # compute the forward kinematics
         _, y_left_W, y_right_W = self.compute_forward_kinematics()
@@ -197,7 +207,8 @@ class BipedSimulation:
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
-        self.u = u_ff + u_pos + u_vel + self.u_bias
+        # self.u = u_ff + u_pos + u_vel + self.u_bias
+        self.u = 0.115
 
     ############################################### KINEMATICS ######################################
 
@@ -451,6 +462,8 @@ class BipedSimulation:
         # phase
         t_phase_path = "../data/t_phase.csv"
         stance_path = "../data/stance.csv"
+        stance_foot_path = "../data/stance_foot.csv"
+        swing_init_path = "../data/swing_init.csv"
 
         # rom state
         rom_state_path = "../data/rom_state.csv"
@@ -470,6 +483,8 @@ class BipedSimulation:
             os.remove(stance_path)
             os.remove(rom_state_path)
             os.remove(rom_input_path)
+            os.remove(stance_foot_path)
+            os.remove(swing_init_path)
         except OSError:
             pass
     
@@ -578,7 +593,11 @@ class BipedSimulation:
                     f.write("1\n")
                 elif self.stance_foot == "R":
                     f.write("0\n")
-
+            with open(stance_foot_path, 'a') as f:
+                f.write(f"{self.p_stance[0][0]},{self.p_stance[1][0]}\n")
+            with open(swing_init_path, 'a') as f:
+                f.write(f"{self.p_swing_init[0][0]},{self.p_swing_init[1][0]}\n")
+            
             # Log the ROM state
             with open(rom_state_path, 'a') as f:
                 f.write(f"{self.p_rom},{self.v_rom}\n")
