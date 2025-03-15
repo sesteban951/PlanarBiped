@@ -49,12 +49,12 @@ class BipedSimulation:
         self.l2 = 0.5 # length of the shin  (check that this matches the XML file)
 
         # center of mass state
-        self.p_com = None
-        self.v_com = None
+        self.p_com = 0.0
+        self.v_com = 0.0
 
         # ROM state
-        self.p_rom = None
-        self.v_rom = None
+        self.p_rom = 0.0
+        self.v_rom = 0.0
 
         # desired COM state
         self.v_des = config["HLIP"]["v_des"]
@@ -96,6 +96,9 @@ class BipedSimulation:
         self.sigma_P1 = self.lam * self.coth(0.5 * self.lam * self.T_SSP)
         self.u_bias = config["HLIP"]["u_bias"]
 
+        # blend foot trajectory
+        self.blend_foot_traj = config["HLIP"]["blend_foot_traj"]
+
         # low level joint gains
         self.kp_H = config["GAINS"]["kp_H"]
         self.kd_H = config["GAINS"]["kd_H"]
@@ -117,8 +120,7 @@ class BipedSimulation:
         self.num_steps = np.floor(self.sim_time / self.T_SSP)
 
         # update the phase variable
-        self.T_phase += self.dt_sim 
-        self.T_phase = np.clip(self.T_phase, 0.0, self.T_SSP)
+        self.T_phase += self.dt_sim
 
         # update the stance if the number of steps has changed
         if self.num_steps_prev != self.num_steps:
@@ -126,6 +128,9 @@ class BipedSimulation:
             # update the stance and swing feet info
             self.update_stance_foot()
             self.num_steps_prev = self.num_steps
+
+            # reset the phase variable
+            self.T_phase = 0.0
 
     # update which foot is swing and stance
     def update_stance_foot(self):
@@ -207,8 +212,7 @@ class BipedSimulation:
         u_pos = self.Kp_db * (p_minus_R - p_minus_H)
         u_vel = self.Kd_db * (v_minus_R - v_minus_H)
 
-        # self.u = u_ff + u_pos + u_vel + self.u_bias
-        self.u = 0.115
+        self.u = u_ff + u_pos + u_vel + self.u_bias
 
     ############################################### KINEMATICS ######################################
 
@@ -228,13 +232,13 @@ class BipedSimulation:
 
         # bezier curve points
         if self.bez_deg == 5:
-            zm = (self.z_apex + self.z_foot_offset) * (8/3)
+            zm = (self.z_apex + self.z_foot_offset) * (8/3) 
+            x_pts = np.array([x0, x0, xm, xf, xf]) # x Bezier points
+            z_pts = np.array([z0, z0, zm, zf, zf]) # z Bezier points
+        elif self.bez_deg == 7:
+            zm = (self.z_apex + self.z_foot_offset) * (16/5)
             x_pts = np.array([x0, x0, x0, xm, xf, xf, xf]) # x Bezier points
             z_pts = np.array([z0, z0, z0, zm, zf, zf, zf]) # z Bezier points
-        elif self.bez_deg == 7:
-            zm = (self.z_apex + self.z_foot_offset) * (16/5) 
-            x_pts = np.array([x0, x0, xm, xf,  xf]) # x Bezier points
-            z_pts = np.array([z0, z0, zm, zf,  zf]) # z Bezier points
         
         # bezier control points
         P = np.array([x_pts, z_pts])
@@ -252,16 +256,18 @@ class BipedSimulation:
         # evaulate the bezier curve at time t
         p_swing_bez = curve.evaluate(t)
 
-        # get the current swing foot position
-        _, y_left_W, y_right_W = self.compute_forward_kinematics()
-        if self.stance_foot == "L":
-            p_swing_act = y_right_W
-        elif self.stance_foot == "R":
-            p_swing_act = y_left_W
+        # track a convex combination of bezier and current foot position
+        if self.blend_foot_traj == True:
+            _, y_left_W, y_right_W = self.compute_forward_kinematics()
+            if self.stance_foot == "L":
+                p_swing_act = y_right_W
+            elif self.stance_foot == "R":
+                p_swing_act = y_left_W
+            p_swing = (1 - t) * p_swing_act + t * p_swing_bez
         
-        # convex combination of bezier and current foot position
-        # p_swing = (1 - t) * p_swing_act + t * p_swing_bez
-        p_swing = p_swing_bez
+        # directly track the bezier curve
+        else:
+            p_swing = p_swing_bez
 
         return p_swing
 
@@ -520,19 +526,11 @@ class BipedSimulation:
 
             # update the simulation time
             self.sim_time = self.data.time
+            print("*" * 20)
+            print(f"t_sim: {self.sim_time:.3f}")
 
             # update phasing variables
             self.update_phase()
-
-            # update the phasing variable i phase completed
-            if ((self.sim_time - t_phase_reset) > self.T_SSP) or (self.sim_time == 0.0):
-
-                # update the stance foot
-                self.T_phase = 0.0
-                t_phase_reset = self.sim_time
-
-                # update the stance foot
-                self.update_stance_foot()
 
             # update the COM state
             self.update_com_state()
