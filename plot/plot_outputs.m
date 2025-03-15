@@ -82,155 +82,157 @@ t_SSP = 0: T_SSP : n_steps*T_SSP;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% figure('Name', 'Output Data');
+figure('Name', 'Output Data');
 
-% tabgroup = uitabgroup('Position', [0 0 1 1]);
+tabgroup = uitabgroup('Position', [0 0 1 1]);
 
-% tab_outputs = uitab(tabgroup, 'Title', 'Outputs');
-% ax_outputs = axes('Parent', tab_outputs);
+tab_outputs = uitab(tabgroup, 'Title', 'Outputs');
+ax_outputs = axes('Parent', tab_outputs);
 
-% subplot(3, 3, 1);
-% grid on; hold on;
-% plot(t, y_base_des(:, 1), 'b', 'LineWidth', 2);
-% plot(t, y_base_act(:, 1), 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('X Position [m]');
-% title('Base px');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 1);
+grid on; hold on;
+plot(t, y_base_des(:, 1), 'b', 'LineWidth', 2);
+plot(t, y_base_act(:, 1), 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('X Position [m]');
+title('Base px');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 4);
-% grid on; hold on;
-% plot(t, y_base_des(:, 2), 'b', 'LineWidth', 2);
-% plot(t, y_base_act(:, 2), 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('Z Position [m]');
-% title('Base pz');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 4);
+grid on; hold on;
+plot(t, y_base_des(:, 2), 'b', 'LineWidth', 2);
+plot(t, y_base_act(:, 2), 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('Z Position [m]');
+title('Base pz');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 7);
-% grid on; hold on;
-% plot(t, y_base_des(:, 3), 'b', 'LineWidth', 2);
-% plot(t, y_base_act(:, 3), 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('Theta [rad]');
-% title('Base theta');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 7);
+grid on; hold on;
+plot(t, y_base_des(:, 3), 'b', 'LineWidth', 2);
+plot(t, y_base_act(:, 3), 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('Theta [rad]');
+title('Base theta');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 2);
-% grid on; hold on;
-% plot(t, y_left_des(:, 1), 'b.', 'LineWidth', 2);
-% plot(t, y_left_act(:, 1), 'r.', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('X Position [m]');
-% title('Left px');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 2);
+grid on; hold on;
+plot(t, y_left_des(:, 1), 'b.', 'LineWidth', 2);
+plot(t, y_left_act(:, 1), 'r.', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('X Position [m]');
+title('Left px');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 5);
-% grid on; hold on;
-% plot(t, y_left_des(:, 2), 'b', 'LineWidth', 2);
-% plot(t, y_left_act(:, 2), 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('Z Position [m]');
-% title('Left pz');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 5);
+grid on; hold on;
+plot(t, y_left_des(:, 2), 'b', 'LineWidth', 2);
+plot(t, y_left_act(:, 2), 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('Z Position [m]');
+title('Left pz');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 3);
-% grid on; hold on;
-% plot(t, y_right_des(:, 1), 'b.', 'LineWidth', 2);
-% plot(t, y_right_act(:, 1), 'r.', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('X Position [m]');
-% title('Right px');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 3);
+grid on; hold on;
+plot(t, y_right_des(:, 1), 'b.', 'LineWidth', 2);
+plot(t, y_right_act(:, 1), 'r.', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('X Position [m]');
+title('Right px');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 6);
-% grid on; hold on;
-% plot(t, y_right_des(:, 2), 'b', 'LineWidth', 2);
-% plot(t, y_right_act(:, 2), 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('Z Position [m]');
-% title('Right pz');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 6);
+grid on; hold on;
+plot(t, y_right_des(:, 2), 'b', 'LineWidth', 2);
+plot(t, y_right_act(:, 2), 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('Z Position [m]');
+title('Right pz');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 8);
-% grid on; hold on;
-% plot(y_left_des(:, 1), y_left_des(:, 2), 'b.', 'LineWidth', 2);
-% plot(y_left_act(:, 1), y_left_act(:, 2), 'r.', 'LineWidth', 2);
-% xlabel('X Position [m]');
-% ylabel('Z Position [m]');
-% title('Left Leg');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 8);
+grid on; hold on;
+plot(y_left_des(:, 1), y_left_des(:, 2), 'b.', 'LineWidth', 2);
+plot(y_left_act(:, 1), y_left_act(:, 2), 'r.', 'LineWidth', 2);
+xlabel('X Position [m]');
+ylabel('Z Position [m]');
+title('Left Leg');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% subplot(3, 3, 9);
-% grid on; hold on;
-% plot(y_right_des(:, 1), y_right_des(:, 2), 'b.', 'LineWidth', 2);
-% plot(y_right_act(:, 1), y_right_act(:, 2), 'r.', 'LineWidth', 2);
-% xlabel('X Position [m]');
-% ylabel('Z Position [m]');
-% title('Right Leg');
-% legend('Desired', 'Actual', 'Location', 'best');
+subplot(3, 3, 9);
+grid on; hold on;
+plot(y_right_des(:, 1), y_right_des(:, 2), 'b.', 'LineWidth', 2);
+plot(y_right_act(:, 1), y_right_act(:, 2), 'r.', 'LineWidth', 2);
+xlabel('X Position [m]');
+ylabel('Z Position [m]');
+title('Right Leg');
+legend('Desired', 'Actual', 'Location', 'best');
 
-% tab_joints = uitab(tabgroup, 'Title', 'Joints');
-% ax_joints = axes('Parent', tab_joints);
+tab_joints = uitab(tabgroup, 'Title', 'Joints');
+ax_joints = axes('Parent', tab_joints);
 
-% subplot(2,2,1);
-% grid on; hold on; 
-% plot(t, q_HL_des, 'b', 'LineWidth', 2);
-% plot(t, q_HL, 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% title('Left Hip');
-% legend('Desired', 'Actual');
+subplot(2,2,1);
+grid on; hold on; 
+plot(t, q_HL_des, 'b', 'LineWidth', 2);
+plot(t, q_HL, 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+title('Left Hip');
+legend('Desired', 'Actual');
 
-% subplot(2,2,2);
-% grid on; hold on;
-% plot(t, q_KL_des, 'b', 'LineWidth', 2);
-% plot(t, q_KL, 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% title('Left Knee');
-% legend('Desired', 'Actual');
+subplot(2,2,2);
+grid on; hold on;
+plot(t, q_KL_des, 'b', 'LineWidth', 2);
+plot(t, q_KL, 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+title('Left Knee');
+legend('Desired', 'Actual');
 
-% subplot(2,2,3);
-% grid on; hold on;
-% plot(t, q_HR_des, 'b', 'LineWidth', 2);
-% plot(t, q_HR, 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% title('Right Hip');
-% legend('Desired', 'Actual');
+subplot(2,2,3);
+grid on; hold on;
+plot(t, q_HR_des, 'b', 'LineWidth', 2);
+plot(t, q_HR, 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+title('Right Hip');
+legend('Desired', 'Actual');
 
-% subplot(2,2,4);
-% grid on; hold on;
-% plot(t, q_KR_des, 'b', 'LineWidth', 2);
-% plot(t, q_KR, 'r', 'LineWidth', 2);
-% xlabel('Time [s]');
-% title('Right Knee');
-% legend('Desired', 'Actual');
+subplot(2,2,4);
+grid on; hold on;
+plot(t, q_KR_des, 'b', 'LineWidth', 2);
+plot(t, q_KR, 'r', 'LineWidth', 2);
+xlabel('Time [s]');
+title('Right Knee');
+legend('Desired', 'Actual');
 
-% tab_phase = uitab(tabgroup, 'Title', 'Phase');
-% ax_phase = axes('Parent', tab_phase);
+tab_phase = uitab(tabgroup, 'Title', 'Phase');
+ax_phase = axes('Parent', tab_phase);
 
-% grid on; hold on;
-% plot(t, t_phase, 'b', 'LineWidth', 2);
+grid on; hold on;
+plot(t, t_phase, 'b', 'LineWidth', 2);
+for i = 1:length(t_SSP)
+    xline(t_SSP(i), '--r', 'LineWidth', 2);
+end
+plot(t, stance*0.4, 'g', 'LineWidth', 2);
+xlabel('Time [s]');
+ylabel('Phase [s]');
+legend('Phase', 'Switch', 'Location', 'best');
+title('Phase');
+
+% FOR DEBUGGING
+
+% figure('Name', 'Foot Comparison');
+% hold on; 
+% plot(t, y_left_des(:, 1), 'bo', "MarkerSize", 5, 'LineWidth', 2);
+% plot(t, y_right_des(:, 1), 'rx', "MarkerSize", 3, 'LineWidth', 2);
 % for i = 1:length(t_SSP)
-%     xline(t_SSP(i), '--r', 'LineWidth', 2);
+%     xline(t_SSP(i), 'k--', 'LineWidth', 1);
 % end
-% plot(t, stance*0.4, 'g', 'LineWidth', 2);
-% xlabel('Time [s]');
-% ylabel('Phase [s]');
-% legend('Phase', 'Switch', 'Location', 'best');
-% title('Phase');
 
-figure('Name', 'Foot Comparison');
-hold on; 
-plot(t, y_left_des(:, 1), 'bo', "MarkerSize", 5, 'LineWidth', 2);
-plot(t, y_right_des(:, 1), 'rx', "MarkerSize", 1, 'LineWidth', 2);
-for i = 1:length(t_SSP)
-    xline(t_SSP(i), 'k--', 'LineWidth', 1);
-end
-
-figure;
-hold on;
-plot(t, p_stance(:,1),'bo', "MarkerSize", 2, 'LineWidth', 2);
-plot(t, p_swing_init(:,1),'ro', "MarkerSize", 2, 'LineWidth', 2);
-for i = 1:length(t_SSP)
-    xline(t_SSP(i), 'k--', 'LineWidth', 1);
-end
+% figure;
+% hold on;
+% plot(t, p_stance(:,1),'bo', "MarkerSize", 2, 'LineWidth', 2);
+% plot(t, p_swing_init(:,1),'ro', "MarkerSize", 2, 'LineWidth', 2);
+% for i = 1:length(t_SSP)
+%     xline(t_SSP(i), 'k--', 'LineWidth', 1);
+% end

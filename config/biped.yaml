@@ -5,10 +5,10 @@
 # Simulation parameters
 SIM:
     # Total Simulation time
-    sim_time: 3.0
+    sim_time: 9.0
 
     # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
-    hz_render: 500
+    hz_render: 50
 
 #################################################################
 
@@ -31,10 +31,10 @@ INIT:
 HLIP:
 
     # desired velocity
-    v_des: 0.0
+    v_des: 1.0
 
     # sinslge support phase length
-    T_SSP: 0.4
+    T_SSP: 0.5
 
     # desired torso config
     theta_des: -0.2 # desired torso angle
@@ -45,10 +45,13 @@ HLIP:
     z_foot_offset: 0.075  # foot offset from ground
 
     # foot placement controller bias
-    u_bias: -0.05
+    u_bias: -0.03
 
     # bezier curve degree
     bezier_deg: 5 # either 5 or 7
+
+    # blend foot trajectory
+    blend_foot_traj: False
 
 #################################################################
 
@@ -57,11 +60,11 @@ GAINS:
     
     # hip torques
     kp_H: 750.0
-    kd_H: 25.0
+    kd_H: 30.0
 
     # knee torques
     kp_K: 750.0
-    kd_K: 25.0
+    kd_K: 30.0
 
 #################################################################
 
@@ -71,7 +74,7 @@ CAMERA:
     distance: 3.0
 
     # pz offset from COM
-    pz_com_offset: -0.8
+    pz_com_offset: 0.0
 
     # cmaera orientation
     elevation: 0.0

@@ -3,7 +3,6 @@
 import numpy as np
 import scipy as sp
 import os
-import copy
 
 # mujoco stuff
 import mujoco
@@ -245,9 +244,6 @@ class BipedSimulation:
 
         # want to compute this at normalized time
         t = self.T_phase / self.T_SSP
-
-        # clip t to be between 0 and 1
-        t = np.clip(t, 0.0, 1.0)
 
         # build the bezier curve
         nodes = np.asfortranarray(P)
@@ -621,7 +617,6 @@ class BipedSimulation:
 
             # Poll for window events like keypress or close
             glfw.poll_events()
-
 
 ####################################################################################
 # Main Execution
