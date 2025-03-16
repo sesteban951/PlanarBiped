@@ -5,10 +5,10 @@
 # Simulation parameters
 SIM:
     # Total Simulation time
-    sim_time: 25.0
+    sim_time: 40.0
 
     # Desired rendering update rate [Hz], (~50 Hz normal, ~500 Hz slo mo)
-    hz_render: 50
+    hz_render: 40
 
 #################################################################
 
@@ -37,7 +37,7 @@ HLIP:
     T_SSP: 0.5
 
     # desired torso config
-    theta_des: -0.2 # desired torso angle
+    theta_des: -0.1 # desired torso angle
     z0: 0.9         # desired COM height
 
     # desired foot config
@@ -59,8 +59,8 @@ HLIP:
 JOYSTICK:
 
     # max speed for joystick
-    v_max: 1.0
-    v_min: -1.0
+    v_max: 1.0   # [m/s]
+    v_min: -1.0  # [m/s]
 
     # deadzone
     deadzone: 0.05
@@ -71,11 +71,11 @@ JOYSTICK:
 GAINS:
     
     # hip torques
-    kp_H: 750.0
-    kd_H: 50.0
+    kp_H: 500.0
+    kd_H: 40.0
 
     # knee torques
-    kp_K: 750.0
+    kp_K: 500.0
     kd_K: 50.0
 
 #################################################################
