@@ -203,11 +203,12 @@ function u = get_input(t, x, params)
     % u = pi * sin(omega * t);
 
     % track the trajectory
-    theta = atan2(x(2), x(1));
+    c = params.c;
+    theta = atan2(x(2) - c(1), x(1) - c(2));
     angle1 = params.angle1;
     angle2 = params.angle2;
     T = params.T_SSP;
-    angle = ((angle2 - angle1)/T) * t + angle1
+    angle = ((angle2 - angle1)/T) * t + angle1;
     u = -5.0 * (theta - angle);
 end
 
