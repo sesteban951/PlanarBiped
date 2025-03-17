@@ -3,40 +3,47 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all; clc; close all;
 
+% swing foot parameters
+h = 0.15;
+p1 = 0.1;
+p2 = 0.5;
+y_offset = 0.0;
+
+% find the circle parameters
+[c, r, angle1, angle2] = circle_params(p1, p2, h);
+
 % polar system parameters
-params.R = 1.0;
 params.kr = 5.0;
+params.R = r;
+params.c = c;
+params.angle1 = angle1;
+params.angle2 = angle2;
+params.y_offset = y_offset;
+params.T_SSP = 10.0;
 
 % initial conditions
-xr_0 = [2.0;  % initial r position
-        0];  % initial theta position
-xc_0 = [2.0;  % initial x position
-        0]; % initial y position
+xr_0 = [1.0;    % initial r position
+        pi/2];   % initial theta position
+[px, py] = polar_to_cartesian(xr_0(1), xr_0(2));
+xc_0 = [px; py]; % initial cartesian position
 
 % time span
-tspan = 0:0.025:10;
+T_SSP = params.T_SSP;
+tspan = 0: 0.025 : T_SSP;
 
 % simulate
-[~, xr] = ode45(@(t, x) polar_dyn(t, x, params), tspan, xr_0);
 [t, xc] = ode45(@(t, x) cartesian_dyn(t, x, params), tspan, xc_0);
-
-% convert the polar coordinates to cartesian
-xr_converted = zeros(length(t), 2);
-for i = 1:length(t)
-    [xr_1, xr_2] = polar_to_cartesian(xr(i, 1), xr(i, 2));
-    xr_converted(i, :) = [xr_1, xr_2];
-end
 
 % create circle for visualization
 theta = linspace(0, 2 * pi, 100);
-x_circle = params.R .* cos(theta);
-y_circle = params.R .* sin(theta);
+x_circle = params.R .* cos(theta) + params.c(1);
+y_circle = params.R .* sin(theta) + params.c(2) + y_offset;
 
 % compute vector field grid
-x_min = min([xr_converted(:, 1); xc(:, 1)]) - 0.25;
-x_max = max([xr_converted(:, 1); xc(:, 1)]) + 0.25;
-y_min = min([xr_converted(:, 2); xc(:, 2)]) - 0.25;
-y_max = max([xr_converted(:, 2); xc(:, 2)]) + 0.25;
+x_min = min([xc(:, 1)]) - 0.25;
+x_max = max([xc(:, 1)]) + 0.25;
+y_min = min([xc(:, 2)]) - 0.25;
+y_max = max([xc(:, 2)]) + 0.25;
 x1_range = linspace(x_min, x_max, 25);
 x2_range = linspace(y_min, y_max, 25);
 [X, Y] = meshgrid(x1_range, x2_range);
@@ -71,6 +78,14 @@ ylim([y_min, y_max]);
 plot(x_circle, y_circle, 'k--', 'LineWidth', 2);
 xlabel('x1');
 ylabel('x2');
+
+% plot the start and end points
+cx = c(1);
+cy = c(2);
+plot(p1, y_offset, 'go', 'LineWidth', 3);
+plot(p2, y_offset, 'ro', 'LineWidth', 3);
+plot([cx, cx + r*cos(angle1)], [cy, cy + r*sin(angle1)] + y_offset, 'k--', 'LineWidth', 2);
+plot([cx, cx + r*cos(angle2)], [cy, cy + r*sin(angle2)] + y_offset, 'k--', 'LineWidth', 2);
 
 % plot the vector field animation
 pause(0.5);
@@ -122,23 +137,35 @@ end
 % Dynamics
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% polar dynamics
-function xdot = polar_dyn(t, x, params)
+% compute the circle parameters
+function [c, r,angle1, angle2] = circle_params(x1, x2, h)
+
+    % find the circle center
+    d = abs(x2 - x1) / 2;
+    r = (h^2 + d^2) / (2*h);
+    cx = (x1 + x2) / 2;
+    if h <= d
+        cy = h - r;
+    else
+        cy = r - h;
+    end
+
+    % first point hit from positive x-axis (CCW)
+    if abs(cy) < 1e-6
+        angle1 = pi/2;
+        angle2 = pi/2;
+    else
+        angle = atan2(d, abs(cy));
+        if x1 > cx
+            angle1 = pi/2 - angle;
+            angle2 = angle1 + 2*angle;
+        else
+            angle2 = pi/2 - angle;
+            angle1 = angle2 + 2*angle;
+        end
+    end
     
-    % unpack the parameters
-    R = params.R;
-    kr = params.kr;
-
-    % unpack the polar states
-    r = x(1);
-    theta = x(2);
-
-    % get the desired theta input
-    u = get_input(t, theta);
-
-    % dynamics
-    xdot = [-kr * (r - R);
-            u];
+    c = [cx, cy];
 end
 
 % cartesian dynamics
@@ -146,15 +173,17 @@ function xdot = cartesian_dyn(t, x, params)
     
     % unpack the parameters
     R = params.R;
+    c = params.c;
     kr = params.kr;
+    y_offset = params.y_offset;
 
     % unpack the cartesian states
-    x1 = x(1);
-    x2 = x(2);
+    x1 = x(1) - c(1);
+    x2 = x(2) - c(2) - y_offset;
     x_norm = sqrt(x1^2 + x2^2);
 
     % get the desired theta input
-    u = get_input(t, x);
+    u = get_input(t, x, params);
 
     % avoid division by zero
     if x_norm == 0
@@ -167,10 +196,19 @@ function xdot = cartesian_dyn(t, x, params)
 end
 
 % get the polar input
-function u = get_input(t, x)
-    f = 0.2;
-    omega = 2 * pi * f;
-    u = pi * sin(omega * t);
+function u = get_input(t, x, params)
+    % fun sine wave
+    % f = 0.2;
+    % omega = 2 * pi * f;
+    % u = pi * sin(omega * t);
+
+    % track the trajectory
+    theta = atan2(x(2), x(1));
+    angle1 = params.angle1;
+    angle2 = params.angle2;
+    T = params.T_SSP;
+    angle = ((angle2 - angle1)/T) * t + angle1
+    u = -5.0 * (theta - angle);
 end
 
 % function to convert from polar to cartesian coordinates

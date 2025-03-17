@@ -5,8 +5,8 @@ clear all; clc; close all;
 
 % desired circle parameters
 h = 0.15;
-x1 = 1.0
-x2 = 0.0
+x1 = 1.0;
+x2 = 0.0;
 % x1 = unifrnd(-1.0, 1.0)
 % x2 = unifrnd(-1.0, 1.0)
 y_offset = 0.075;
