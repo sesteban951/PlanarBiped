@@ -111,16 +111,16 @@ int main()
             // Update controller
             controller.UpdateController(q_pos, q_vel, t_curr, q_pos_ref, q_vel_ref, q_tor_ref);
 
-            std::cout << "q_pos: " << q_pos.transpose() << std::endl;
-            std::cout << "q_pos_ref: " << q_pos_ref.transpose() << std::endl;
-            std::cout << "q_vel: " << q_vel.transpose() << std::endl;
-            std::cout << "q_vel_ref: " << q_vel_ref.transpose() << std::endl;
+            // std::cout << "q_pos: " << q_pos.transpose() << std::endl;
+            // std::cout << "q_pos_ref: " << q_pos_ref.transpose() << std::endl;
+            // std::cout << "q_vel: " << q_vel.transpose() << std::endl;
+            // std::cout << "q_vel_ref: " << q_vel_ref.transpose() << std::endl;
 
             // Calculate the motor torques
             Eigen::Vector<double, 4> motor_torques = controller.CalculateMotorTorques(q_pos, q_vel, q_pos_ref, q_vel_ref, q_tor_ref);
 
             // Print the motor torques
-            std::cout << "Motor torques: " << motor_torques.transpose() << std::endl;
+            // std::cout << "Motor torques: " << motor_torques.transpose() << std::endl;
 
             // Set the motor torques in the simulator
             simulator.SetMotorTorques(motor_torques);
@@ -156,6 +156,8 @@ int main()
 
             // Update the last simulation time
             last_sim_time = now;
+
+            std::cout << std::endl;
         }
 
         // Calculate elapsed time since last visualization update

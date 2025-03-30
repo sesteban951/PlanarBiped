@@ -416,7 +416,7 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     Eigen::Vector<double, 2> K_deadbeat = CalculateDeadbeatGains(this->T_SSP_, this->T_DSP_, lambda);
 
     // Calculate the step length
-    double step_length = this->v_x_ref_ * this->T_SSP_ + K_deadbeat.transpose() * (x_hlip_pre_impact_ref - x_hlip_pre_impact);
+    double step_length = this->v_x_ref_ * this->T_SSP_ + K_deadbeat.transpose() * (x_hlip_pre_impact - x_hlip_pre_impact_ref);
 
     // Calculate the desired swing foot references
     this->swf_pos_x_end_ = step_length;
@@ -466,6 +466,8 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     y_ref_stf_frame(OutputIDX::COM_THETA) = this->com_theta_ref_;
     y_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_pos_x_ref;
     y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_des;
+
+
 
     // Calculate the desired joint angles
     q_pos_ref = SolveIK(y_ref_stf_frame);
