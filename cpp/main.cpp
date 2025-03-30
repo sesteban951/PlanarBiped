@@ -21,7 +21,7 @@ int main()
     simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned.xml");
 
     double simulation_rate = 500.0;
-    double visualization_rate = 60000.0;
+    double visualization_rate = 60.0;
 
     // Set the initial conditions for the simulation
     Eigen::Vector<double, N_OUTPUTS> y_ref;
@@ -143,6 +143,23 @@ int main()
 
                 // Update the stance foot position in the simulator
                 simulator.UpdateStanceFootPosition(stf_pos_world_frame);
+
+                if(t_curr < 2.0)
+                {
+                    controller.SetVelRef(0.0);
+                }
+                else if(t_curr < 4.0)
+                {
+                    controller.SetVelRef(0.25);
+                }
+                else if(t_curr < 6.0)
+                {
+                    controller.SetVelRef(0.5);
+                }
+                else
+                {
+                    controller.SetVelRef(0.75);
+                }
             }
 
             // Update controller

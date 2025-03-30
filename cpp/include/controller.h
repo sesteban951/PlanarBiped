@@ -73,6 +73,8 @@ class Controller
 
     public: double GetBasePosZRef(){return com_pos_z_ref_;}
 
+    public: void SetVelRef(double v_x_ref){v_x_ref_ = v_x_ref;}
+
     // Model parameters
     private: double l_thigh_ = 0.5;
     private: double l_shin_ = 0.5;
