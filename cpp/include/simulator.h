@@ -67,6 +67,8 @@ class Simulator
 
     public: void SetState(Eigen::Vector<double, N_Q> q_pos);
 
+    public: void UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame);
+
     public: GLFWwindow* window;
 
 };
