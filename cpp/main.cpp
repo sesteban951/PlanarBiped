@@ -81,9 +81,46 @@ int main()
             // Print the time
             std::cout << "t: " << t_curr << "\t";
 
+            std::cout << std::endl;
+
             // Get the latest state
             Eigen::Vector<double, N_Q> q_pos = simulator.GetGeneralizedPosition();
             Eigen::Vector<double, N_Q> q_vel = simulator.GetGeneralizedVelocity();
+
+            // Calculate outputs in the world frame
+            Eigen::Vector<double, N_OUTPUTS> y_world_frame = controller.CalculateOutputsInWorldFrame(q_pos);
+            Eigen::Vector<double, N_OUTPUTS> y_dot_world_frame = controller.CalculateOutputVel(q_pos, q_vel);
+            
+            Eigen::Vector<double, 3> base_pos_world = simulator.GetTorsoPos();
+            Eigen::Vector<double, 3> base_vel_world = simulator.GetTorsoVel();
+            Eigen::Vector<double, 2> stf_pos_world = simulator.GetStfPos();
+            Eigen::Vector<double, 2> stf_vel_world = simulator.GetStfVel();
+            Eigen::Vector<double, 2> swf_pos_world = simulator.GetSwfPos();
+            Eigen::Vector<double, 2> swf_vel_world = simulator.GetSwfVel();
+
+            std::cout << "com_pos_x: " << y_world_frame(OutputIDX::COM_POS_X) << "\t";
+            std::cout << "com_pos_z: " << y_world_frame(OutputIDX::COM_POS_Z) << "\t";
+            std::cout << "com_theta: " << y_world_frame(OutputIDX::COM_THETA) << "\t";
+            std::cout << "swf_pos_x: " << y_world_frame(OutputIDX::SWF_POS_X) << "\t";
+            std::cout << "swf_pos_z: " << y_world_frame(OutputIDX::SWF_POS_Z) << "\t";
+            std::cout << "com_vel_x: " << y_dot_world_frame(OutputIDX::COM_POS_X) << "\t";
+            std::cout << "com_vel_z: " << y_dot_world_frame(OutputIDX::COM_POS_Z) << "\t";
+            std::cout << "com_ang_vel: " << y_dot_world_frame(OutputIDX::COM_THETA) << "\t";
+            std::cout << "swf_vel_x: " << y_dot_world_frame(OutputIDX::SWF_POS_X) << "\t";
+            std::cout << "swf_vel_z: " << y_dot_world_frame(OutputIDX::SWF_POS_Z) << "\t";
+            std::cout << std::endl;
+
+            std::cout << "com_pos_x: " << base_pos_world(0) << "\t";
+            std::cout << "com_pos_z: " << base_pos_world(1) << "\t";
+            std::cout << "com_theta: " << base_pos_world(2) << "\t";
+            std::cout << "swf_pos_x: " << swf_pos_world(0) << "\t";
+            std::cout << "swf_pos_z: " << swf_pos_world(1) << "\t";
+            std::cout << "com_vel_x: " << base_vel_world(0) << "\t";
+            std::cout << "com_vel_z: " << base_vel_world(1) << "\t";
+            std::cout << "com_ang_vel: " << base_vel_world(2) << "\t";
+            std::cout << "swf_vel_x: " << swf_vel_world(0) << "\t";
+            std::cout << "swf_vel_z: " << swf_vel_world(1) << "\t";
+            std::cout << std::endl;
 
             // Check for step update + reset map
             bool update_stance_foot = controller.CheckForStanceFootUpdate(t_curr, q_pos, q_vel);
@@ -153,6 +190,7 @@ int main()
 
             // Step the Mujoco simulation
             mj_step(MJ_MODEL_PTR, MJ_DATA_PTR);
+            mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 
             // Update the last simulation time
             last_sim_time = now;

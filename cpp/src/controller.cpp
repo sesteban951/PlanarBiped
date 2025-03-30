@@ -343,6 +343,12 @@ void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Ei
 
     // Calculate the state velocity after impact
     q_vel_post_impact = SolveIKDerivative(y_dot_pre_impact_world_frame, q_pos_post_impact);
+
+    // Calculate outputs after impact
+    Eigen::Vector<double, N_OUTPUTS> y_post_impact_stf_frame = CalculateOutputsInStanceFootFrame(q_pos_post_impact);
+
+    // Store the swing foot position and velocity
+    this->swf_pos_x_init_ = y_post_impact_stf_frame(OutputIDX::SWF_POS_X);
 }
 
 Eigen::Vector<double, 3> Controller::GetStfPosWorldFrame()
@@ -453,7 +459,8 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     double swf_vel_x_curr = y_dot_stf_frame(OutputIDX::SWF_POS_X);
     double swf_vel_z_curr = y_dot_stf_frame(OutputIDX::SWF_POS_Z);
 
-    double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * swf_pos_x_des;
+    //double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * swf_pos_x_des;
+    double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * step_length;
     double swf_pos_z_ref = (1.0 - tau_phase) * swf_pos_z_curr + tau_phase * swf_pos_z_des;
 
     double swf_vel_x_ref = (1.0 - tau_phase) * swf_vel_x_curr + tau_phase * swf_vel_x_des;

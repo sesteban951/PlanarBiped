@@ -77,7 +77,25 @@ class Simulator
 
     public: void UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame);
 
+    public: Eigen::Vector<double, 3> GetTorsoPos();
+    public: Eigen::Vector<double, 3> GetTorsoVel();
+    public: Eigen::Vector<double, 2> GetStfPos();
+    public: Eigen::Vector<double, 2> GetStfVel();
+    public: Eigen::Vector<double, 2> GetSwfPos();
+    public: Eigen::Vector<double, 2> GetSwfVel();
+
     public: GLFWwindow* window;
+
+    private: int sensor_torso_pos_idx_;
+    private: int sensor_torso_vel_idx_;
+    private: int sensor_torso_quat_idx_;
+    private: int sensor_torso_ang_vel_idx_;
+
+    private: int sensor_stf_pos_idx_;
+    private: int sensor_stf_vel_idx_;
+
+    private: int sensor_swf_pos_idx_;
+    private: int sensor_swf_vel_idx_;
 
 };
 

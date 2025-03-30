@@ -48,6 +48,76 @@ void Simulator::Initialize(const char file_name[])
     MJ_CAMERA.lookat[0] = arr_view[3];
     MJ_CAMERA.lookat[1] = arr_view[4];
     MJ_CAMERA.lookat[2] = arr_view[5];
+
+    // Get the sensor indices
+    this->sensor_torso_pos_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "torso_pos")];
+    this->sensor_torso_vel_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "torso_vel")];
+    this->sensor_torso_quat_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "torso_quat")];
+    this->sensor_torso_ang_vel_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "torso_ang_vel")];
+
+    this->sensor_stf_pos_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "stf_pos")];
+    this->sensor_stf_vel_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "stf_vel")];
+
+    this->sensor_swf_pos_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "swf_pos")];
+    this->sensor_swf_vel_idx_ = MJ_MODEL_PTR->sensor_adr[mj_name2id(MJ_MODEL_PTR, mjOBJ_SENSOR, "swf_vel")];
+}
+
+Eigen::Vector<double, 3> Simulator::GetTorsoPos()
+{
+    Eigen::Vector<double, 3> torso_pos = Eigen::Vector<double, 3>::Zero();
+    torso_pos(0) = MJ_DATA_PTR->sensordata[this->sensor_torso_pos_idx_ + 0];
+    //torso_pos(1) = MJ_DATA_PTR->sensordata[this->sensor_torso_pos_idx_ * 3 + 1];
+    torso_pos(1) = MJ_DATA_PTR->sensordata[this->sensor_torso_pos_idx_ + 2];
+
+    return torso_pos;
+}
+
+Eigen::Vector<double, 3> Simulator::GetTorsoVel()
+{
+    Eigen::Vector<double, 3> torso_vel = Eigen::Vector<double, 3>::Zero();
+    torso_vel(0) = MJ_DATA_PTR->sensordata[this->sensor_torso_vel_idx_ + 0];
+    //torso_vel(1) = MJ_DATA_PTR->sensordata[this->sensor_torso_vel_idx_ * 3 + 1];
+    torso_vel(1) = MJ_DATA_PTR->sensordata[this->sensor_torso_vel_idx_ + 2];
+
+    torso_vel(2) = MJ_DATA_PTR->sensordata[this->sensor_torso_ang_vel_idx_ + 1];
+
+    return torso_vel;
+}
+
+Eigen::Vector<double, 2> Simulator::GetStfPos()
+{
+    Eigen::Vector<double, 2> stf_pos = Eigen::Vector<double, 2>::Zero();
+    stf_pos(0) = MJ_DATA_PTR->sensordata[this->sensor_stf_pos_idx_ + 0];
+    stf_pos(1) = MJ_DATA_PTR->sensordata[this->sensor_stf_pos_idx_ + 2];
+
+    return stf_pos;
+}
+
+Eigen::Vector<double, 2> Simulator::GetStfVel()
+{
+    Eigen::Vector<double, 2> stf_vel = Eigen::Vector<double, 2>::Zero();
+    stf_vel(0) = MJ_DATA_PTR->sensordata[this->sensor_stf_vel_idx_ + 0];
+    stf_vel(1) = MJ_DATA_PTR->sensordata[this->sensor_stf_vel_idx_ + 2];
+
+    return stf_vel;
+}
+
+Eigen::Vector<double, 2> Simulator::GetSwfPos()
+{
+    Eigen::Vector<double, 2> swf_pos = Eigen::Vector<double, 2>::Zero();
+    swf_pos(0) = MJ_DATA_PTR->sensordata[this->sensor_swf_pos_idx_ + 0];
+    swf_pos(1) = MJ_DATA_PTR->sensordata[this->sensor_swf_pos_idx_ + 2];
+
+    return swf_pos;
+}
+
+Eigen::Vector<double, 2> Simulator::GetSwfVel()
+{
+    Eigen::Vector<double, 2> swf_vel = Eigen::Vector<double, 2>::Zero();
+    swf_vel(0) = MJ_DATA_PTR->sensordata[this->sensor_swf_vel_idx_ + 0];
+    swf_vel(1) = MJ_DATA_PTR->sensordata[this->sensor_swf_vel_idx_ + 2];
+
+    return swf_vel;
 }
 
 void Simulator::UpdateScene()
