@@ -347,13 +347,44 @@ Eigen::Vector<double, 3> Controller::GetStfPosWorldFrame()
     return Eigen::Vector<double, 3>(this->p_x_stf_world_frame_, 0.0, 0.0);
 }
 
+bool Controller::CheckForStanceFootUpdate(double t_curr, Eigen::Vector<double, N_Q> q_pos, Eigen::Vector<double, N_Q> q_vel)
+{
+    // Calculate outputs
+    Eigen::Vector<double, N_OUTPUTS> y_world_frame = CalculateOutputsInWorldFrame(q_pos);
+
+    // Calculate the step time
+    double t_step = t_curr - this->t_step_start_;
+
+    // Check if the swing foot has touched the ground
+    if((t_step > this->T_SSP_ / 2.0) && y_world_frame(OutputIDX::SWF_POS_Z) < 0.001)
+    {
+        // Update the step start time
+        this->t_step_start_ = t_curr;
+
+        // Return true
+        return true;
+    }
+    else
+    {
+        // Return false
+        return false;
+    }
+}
+
 void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos, 
                                   Eigen::Vector<double, N_Q> q_vel,
-                                  double t_step,
+                                  double t_curr,
                                   Eigen::Vector<double, N_Q> &q_pos_ref,
                                   Eigen::Vector<double, N_Q> &q_vel_ref,
                                   Eigen::Vector<double, N_Q> &q_tor_ref)
 {
+    double t_step = t_curr - this->t_step_start_;
+
+    if(t_step > this->T_SSP_)
+    {
+        t_step = this->T_SSP_;
+    }
+
     // Calculate the outputs in the stf frame
     Eigen::Vector<double, N_OUTPUTS> y_stf_frame = CalculateOutputsInStanceFootFrame(q_pos);
     

@@ -90,28 +90,74 @@ void Simulator::SetState(Eigen::Vector<double, N_Q> q_pos)
     mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 }
 
-    void Simulator::UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame) 
+void Simulator::SetMotorTorques(Eigen::Vector<double, 4> q_tor)
+{
+    // Set the motor torques in the Mujoco data structure
+    for(int i = 0; i < 4; i++)
     {
-        int body_id = mj_name2id(MJ_MODEL_PTR, mjOBJ_BODY, "stance_foot");
-        if (body_id == -1) {
-            std::cerr << "Error: stance_foot body not found!" << std::endl;
-            return;
+        if (i < MJ_MODEL_PTR->nu) // Ensure we don't go out of bounds
+        {
+            MJ_DATA_PTR->ctrl[i] = q_tor(i);
         }
-
-        int mocap_id = MJ_MODEL_PTR->body_mocapid[body_id];
-        if (mocap_id == -1) {
-            std::cerr << "Error: stance_foot is not a mocap body!" << std::endl;
-            return;
+        else
+        {
+            std::cerr << "Error: Invalid motor index" << std::endl;
         }
-
-        // Update mocap position
-        MJ_DATA_PTR->mocap_pos[mocap_id * 3] = stf_pos_world_frame[0];
-        MJ_DATA_PTR->mocap_pos[mocap_id * 3 + 1] = stf_pos_world_frame[1];
-        MJ_DATA_PTR->mocap_pos[mocap_id * 3 + 2] = stf_pos_world_frame[2];
-
-        // Apply update
-        mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
     }
+}
+
+Eigen::Vector<double, N_Q> Simulator::GetGeneralizedPosition()
+{
+    Eigen::Vector<double, N_Q> q_pos;
+
+    for(int i = 0; i < N_Q; i++)
+    {
+        if (i < MJ_MODEL_PTR->nq) // Ensure we don't go out of bounds
+        {
+            q_pos(i) = MJ_DATA_PTR->qpos[i];
+        }
+    }
+
+    return q_pos;
+}
+
+Eigen::Vector<double, N_Q> Simulator::GetGeneralizedVelocity()
+{
+    Eigen::Vector<double, N_Q> q_vel;
+
+    for(int i = 0; i < N_Q; i++)
+    {
+        if (i < MJ_MODEL_PTR->nq) // Ensure we don't go out of bounds
+        {
+            q_vel(i) = MJ_DATA_PTR->qvel[i];
+        }
+    }
+
+    return q_vel;
+}
+
+void Simulator::UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame) 
+{
+    int body_id = mj_name2id(MJ_MODEL_PTR, mjOBJ_BODY, "stance_foot");
+    if (body_id == -1) {
+        std::cerr << "Error: stance_foot body not found!" << std::endl;
+        return;
+    }
+
+    int mocap_id = MJ_MODEL_PTR->body_mocapid[body_id];
+    if (mocap_id == -1) {
+        std::cerr << "Error: stance_foot is not a mocap body!" << std::endl;
+        return;
+    }
+
+    // Update mocap position
+    MJ_DATA_PTR->mocap_pos[mocap_id * 3] = stf_pos_world_frame[0];
+    MJ_DATA_PTR->mocap_pos[mocap_id * 3 + 1] = stf_pos_world_frame[1];
+    MJ_DATA_PTR->mocap_pos[mocap_id * 3 + 2] = stf_pos_world_frame[2];
+
+    // Apply update
+    mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
+}
 
 void MouseButton(GLFWwindow* window, int button, int act, int mods)
 {

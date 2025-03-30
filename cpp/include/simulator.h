@@ -67,6 +67,12 @@ class Simulator
 
     public: void SetState(Eigen::Vector<double, N_Q> q_pos);
 
+    public: Eigen::Vector<double, N_Q> GetGeneralizedPosition();
+
+    public: Eigen::Vector<double, N_Q> GetGeneralizedVelocity();
+
+    public: void SetMotorTorques(Eigen::Vector<double, 4> q_tor);
+
     public: void UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame);
 
     public: GLFWwindow* window;
