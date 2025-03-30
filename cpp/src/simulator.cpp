@@ -90,6 +90,22 @@ void Simulator::SetState(Eigen::Vector<double, N_Q> q_pos)
     mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 }
 
+void Simulator::SetState(Eigen::Vector<double, N_Q> q_pos, Eigen::Vector<double, N_Q> q_vel)
+{
+    // Set the joint positions in the Mujoco data structure
+    for(int i = 0; i < N_Q; i++)
+    {
+        if (i < MJ_MODEL_PTR->nq) // Ensure we don't go out of bounds
+        {
+            MJ_DATA_PTR->qpos[i] = q_pos(i);
+            MJ_DATA_PTR->qvel[i] = q_vel(i);
+        }
+    }
+
+    // Update the data structure to reflect the new state
+    mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
+}
+
 void Simulator::SetMotorTorques(Eigen::Vector<double, 4> q_tor)
 {
     // Set the motor torques in the Mujoco data structure

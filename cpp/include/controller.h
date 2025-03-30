@@ -71,6 +71,8 @@ class Controller
 
     bool CheckForStanceFootUpdate(double t_curr, Eigen::Vector<double, N_Q> q_pos, Eigen::Vector<double, N_Q> q_vel);
 
+    public: double GetBasePosZRef(){return com_pos_z_ref_;}
+
     // Model parameters
     private: double l_thigh_ = 0.5;
     private: double l_shin_ = 0.5;
@@ -79,15 +81,15 @@ class Controller
     private: double com_pos_z_ref_ = 0.95;
     private: double com_theta_ref_ = 0.0;
 
-    private: double T_SSP_ = 0.5;
+    private: double T_SSP_ = 0.3;
     private: double T_DSP_ = 0.0;
     private: double g_ = 9.81;
 
-    private: double kp_hip_ = 500.0;
-    private: double kp_knee_ = 500.0;
+    private: double kp_hip_ = 200.0;
+    private: double kp_knee_ = 200.0;
     
-    private: double kd_hip_ = 10.0;
-    private: double kd_knee_ = 10.0;
+    private: double kd_hip_ = 5.0;
+    private: double kd_knee_ = 5.0;
 
     private: double t_step_start_ = 0.0;
 

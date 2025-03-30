@@ -26,7 +26,7 @@ int main()
     // Set the initial conditions for the simulation
     Eigen::Vector<double, N_OUTPUTS> y_ref;
     y_ref(OutputIDX::COM_POS_X) = 0.0;
-    y_ref(OutputIDX::COM_POS_Z) = 0.95;
+    y_ref(OutputIDX::COM_POS_Z) = controller.GetBasePosZRef();
     y_ref(OutputIDX::COM_THETA) = 0.0;
     y_ref(OutputIDX::SWF_POS_X) = 0.0;
     y_ref(OutputIDX::SWF_POS_Z) = 0.0;
@@ -86,7 +86,27 @@ int main()
             Eigen::Vector<double, N_Q> q_vel = simulator.GetGeneralizedVelocity();
 
             // Check for step update + reset map
-            
+            bool update_stance_foot = controller.CheckForStanceFootUpdate(t_curr, q_pos, q_vel);
+
+            if(update_stance_foot == true)
+            {
+                // Compute the reset map
+                Eigen::Vector<double, N_Q> q_pos_pre_impact = q_pos;
+                Eigen::Vector<double, N_Q> q_vel_pre_impact = q_vel;
+                Eigen::Vector<double, N_Q> q_pos_post_impact;
+                Eigen::Vector<double, N_Q> q_vel_post_impact;
+                controller.ComputeResetMap(q_pos_pre_impact, q_vel_pre_impact, q_pos_post_impact, q_vel_post_impact);
+
+                // Set the new state
+                //simulator.SetState(q_pos_post_impact);
+                simulator.SetState(q_pos_post_impact, q_vel_post_impact);
+
+                // Get the stance foot position in the world frame
+                Eigen::Vector<double, 3> stf_pos_world_frame = controller.GetStfPosWorldFrame();
+
+                // Update the stance foot position in the simulator
+                simulator.UpdateStanceFootPosition(stf_pos_world_frame);
+            }
 
             // Update controller
             controller.UpdateController(q_pos, q_vel, t_curr, q_pos_ref, q_vel_ref, q_tor_ref);

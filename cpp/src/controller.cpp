@@ -334,6 +334,9 @@ void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Ei
 {
     // Calculate the current output velocities
     Eigen::Vector<double, N_OUTPUTS> y_dot_pre_impact_world_frame = CalculateOutputVel(q_pos_pre_impact, q_vel_pre_impact);
+    y_dot_pre_impact_world_frame(OutputIDX::SWF_POS_X) = 0.0;
+    y_dot_pre_impact_world_frame(OutputIDX::SWF_POS_Z) = 0.0;
+
 
     // Get the joint coordinates after impact
     q_pos_post_impact = ResetMapQ(q_pos_pre_impact);
@@ -356,8 +359,12 @@ bool Controller::CheckForStanceFootUpdate(double t_curr, Eigen::Vector<double, N
     double t_step = t_curr - this->t_step_start_;
 
     // Check if the swing foot has touched the ground
-    if((t_step > this->T_SSP_ / 2.0) && y_world_frame(OutputIDX::SWF_POS_Z) < 0.001)
+    if((t_step > this->T_SSP_ * 0.8) && y_world_frame(OutputIDX::SWF_POS_Z) < 0.001)
     {
+        std::cout << "Foot switch detected!" << std::endl;
+
+        //exit(0);
+
         // Update the step start time
         this->t_step_start_ = t_curr;
 
@@ -420,7 +427,7 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
                                                     this->swf_pos_x_middle_, this->t_swf_pos_x_middle_, 
                                                     this->T_SSP_);
 
-    this->swf_pos_z_middle_ = 0.15;
+    this->swf_pos_z_middle_ = 0.20;
     this->t_swf_pos_z_middle_ = this->T_SSP_ / 2.0;
     std::vector<double> swf_z_coeffs = CalculateSwfZCoeffs(this->swf_pos_z_init_, this->swf_vel_z_init_, 
                                                     this->swf_pos_z_end_, this->swf_vel_z_end_, 
@@ -458,7 +465,7 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     y_ref_stf_frame(OutputIDX::COM_POS_Z) = this->com_pos_z_ref_;
     y_ref_stf_frame(OutputIDX::COM_THETA) = this->com_theta_ref_;
     y_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_pos_x_ref;
-    y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_ref;
+    y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_des;
 
     // Calculate the desired joint angles
     q_pos_ref = SolveIK(y_ref_stf_frame);

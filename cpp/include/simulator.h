@@ -67,6 +67,8 @@ class Simulator
 
     public: void SetState(Eigen::Vector<double, N_Q> q_pos);
 
+    public: void SetState(Eigen::Vector<double, N_Q> q_pos, Eigen::Vector<double, N_Q> q_vel);
+
     public: Eigen::Vector<double, N_Q> GetGeneralizedPosition();
 
     public: Eigen::Vector<double, N_Q> GetGeneralizedVelocity();
