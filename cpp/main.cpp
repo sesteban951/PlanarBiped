@@ -25,16 +25,35 @@ int main()
 
     // Set the initial conditions for the simulation
     Eigen::Vector<double, N_OUTPUTS> y_ref;
-    y_ref(OutputIDX::COM_POS_X) = 0.1;
+    y_ref(OutputIDX::COM_POS_X) = 0.0;
     y_ref(OutputIDX::COM_POS_Z) = 0.8;
     y_ref(OutputIDX::COM_THETA) = 0.0;
-    y_ref(OutputIDX::SWF_POS_X) = 0.4;
+    y_ref(OutputIDX::SWF_POS_X) = 0.0;
     y_ref(OutputIDX::SWF_POS_Z) = 0.0;
 
     // Solve for the joint angles using the controller
     Eigen::Vector<double, N_Q> q_pos_initial = controller.SolveIK(y_ref);
 
     Eigen::Vector<double, N_Q> q_pos = q_pos_initial;
+
+    // Eigen::Vector<double, N_Q> q_pos_pre_impact = q_pos_initial;
+    // Eigen::Vector<double, N_Q> q_vel_pre_impact(0.20, 0.10, 0.0, 0.10, 0.20);
+    // Eigen::Vector<double, N_OUTPUTS> y_pre_impact_world_frame = controller.CalculateOutputsInWorldFrame(q_pos_pre_impact);
+    // Eigen::Vector<double, N_OUTPUTS> y_dot_pre_impact_world_frame = controller.CalculateOutputVel(q_pos_pre_impact, q_vel_pre_impact);
+    // Eigen::Vector<double, N_Q> q_pos_post_impact;
+    // Eigen::Vector<double, N_Q> q_vel_post_impact;
+    // controller.ComputeResetMap(q_pos_pre_impact, q_vel_pre_impact, q_pos_post_impact, q_vel_post_impact);
+    // Eigen::Vector<double, N_OUTPUTS> y_post_impact_world_frame = controller.CalculateOutputsInWorldFrame(q_pos_post_impact);
+    // Eigen::Vector<double, N_OUTPUTS> y_dot_post_impact_world_frame = controller.CalculateOutputVel(q_pos_post_impact, q_vel_post_impact);
+    // std::cout << "q_pos_pre_impact: " << q_pos_pre_impact.transpose() << std::endl;
+    // std::cout << "q_vel_pre_impact: " << q_vel_pre_impact.transpose() << std::endl;
+    // std::cout << "q_pos_post_impact: " << q_pos_post_impact.transpose() << std::endl;
+    // std::cout << "q_vel_post_impact: " << q_vel_post_impact.transpose() << std::endl;
+    // std::cout << "y_pre_impact_world_frame: " << y_pre_impact_world_frame.transpose() << std::endl;
+    // std::cout << "y_post_impact_world_frame: " << y_post_impact_world_frame.transpose() << std::endl;
+    // std::cout << "y_dot_pre_impact_world_frame: " << y_dot_pre_impact_world_frame.transpose() << std::endl;
+    // std::cout << "y_dot_post_impact_world_frame: " << y_dot_post_impact_world_frame.transpose() << std::endl;
+    // exit(0);
 
     simulator.SetState(q_pos_initial);
 

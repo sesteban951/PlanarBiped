@@ -50,8 +50,17 @@ class Controller
     public: double GetSwfVelZRef(const std::vector<double>& coeffs, double t);
 
     public: void UpdateController(Eigen::Vector<double, N_Q> q_pos, 
-                            Eigen::Vector<double, N_Q> q_vel,
-                            double t_step);
+                                    Eigen::Vector<double, N_Q> q_vel,
+                                    double t_step,
+                                    Eigen::Vector<double, N_Q> &q_pos_ref,
+                                    Eigen::Vector<double, N_Q> &q_vel_ref,
+                                    Eigen::Vector<double, N_Q> &q_tor_ref);
+
+    public: Eigen::Vector<double, 4> CalculateMotorTorques(Eigen::Vector<double, N_Q> q_pos, 
+                                                            Eigen::Vector<double, N_Q> q_vel,
+                                                            Eigen::Vector<double, N_Q> q_pos_ref, 
+                                                            Eigen::Vector<double, N_Q> q_vel_ref,
+                                                            Eigen::Vector<double, N_Q> q_tor_ref);
 
     public: Eigen::Vector<double, N_Q> ResetMapQ(Eigen::Vector<double, N_Q> q_pos);
 
@@ -66,11 +75,36 @@ class Controller
 
     // Control parameters
     private: double com_pos_z_ref_ = 0.7;
+    private: double com_theta_ref_ = 0.0;
 
     private: double T_SSP_ = 0.5;
     private: double T_DSP_ = 0.2;
+    private: double g_ = 9.81;
+
+    private: double kp_hip_ = 200.0;
+    private: double kp_knee_ = 200.0;
+    
+    private: double kd_hip_ = 10.0;
+    private: double kd_knee_ = 10.0;
+
 
     private: double p_x_stf_world_frame_ = 0.0;
+
+    private: double v_x_ref_ = 0.0;
+
+    private: double swf_pos_x_init_ = 0.0;
+    private: double swf_vel_x_init_ = 0.0;
+    private: double swf_pos_x_end_ = 0.0;
+    private: double swf_vel_x_end_ = 0.0;
+    private: double swf_pos_x_middle_ = 0.0;
+    private: double t_swf_pos_x_middle_ = 0.0;
+
+    private: double swf_pos_z_init_ = 0.0;
+    private: double swf_vel_z_init_ = 0.0;
+    private: double swf_pos_z_end_ = 0.0;
+    private: double swf_vel_z_end_ = 0.0;
+    private: double swf_pos_z_middle_ = 0.0;
+    private: double t_swf_pos_z_middle_ = 0.0;
 
 };
 

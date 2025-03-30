@@ -172,14 +172,6 @@ Eigen::Vector<double, N_OUTPUTS> Controller::CalculateOutputsInWorldFrame(Eigen:
     return y_world_frame;
 }
 
-void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos, 
-                                  Eigen::Vector<double, N_Q> q_vel,
-                                  double t_step)
-{
-    // Calculate the outputs in the world frame
-
-}
-
 Eigen::Vector<double, 2> Controller::CalculatePeriod1ImpactRef(double vel_x_ref, double lambda, double T_SSP, double T_DSP)
 {
     Eigen::Vector<double, 2> p1_impact_ref;
@@ -353,4 +345,112 @@ void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Ei
 Eigen::Vector<double, 3> Controller::GetStfPosWorldFrame()
 {
     return Eigen::Vector<double, 3>(this->p_x_stf_world_frame_, 0.0, 0.0);
+}
+
+void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos, 
+                                  Eigen::Vector<double, N_Q> q_vel,
+                                  double t_step,
+                                  Eigen::Vector<double, N_Q> &q_pos_ref,
+                                  Eigen::Vector<double, N_Q> &q_vel_ref,
+                                  Eigen::Vector<double, N_Q> &q_tor_ref)
+{
+    // Calculate the outputs in the stf frame
+    Eigen::Vector<double, N_OUTPUTS> y_stf_frame = CalculateOutputsInStanceFootFrame(q_pos);
+    
+    // Calculate the output velocities in the stf frame
+    Eigen::Vector<double, N_OUTPUTS> y_dot_stf_frame = CalculateOutputVel(q_pos, q_vel);
+
+    // Compute lambda
+    double lambda = sqrt(this->g_ / this->com_pos_z_ref_);
+
+    // Calculate the desired period 1 impact reference
+    Eigen::Vector<double, 2> x_hlip_pre_impact_ref = CalculatePeriod1ImpactRef(this->v_x_ref_, lambda, this->T_SSP_, this->T_DSP_);
+
+    // Store the HLIP state
+    Eigen::Vector<double, 2> x_hlip_curr;
+    x_hlip_curr(0) = y_stf_frame(OutputIDX::COM_POS_X);
+    x_hlip_curr(1) = y_dot_stf_frame(OutputIDX::COM_POS_X);
+
+    // Calculate the estimated pre-impace state
+    Eigen::Vector<double, 2> x_hlip_pre_impact = CalculateSSPPreImpactState(lambda, x_hlip_curr, this->T_SSP_ - t_step);
+
+    // Calculate the deadbeat gains
+    Eigen::Vector<double, 2> K_deadbeat = CalculateDeadbeatGains(this->T_SSP_, this->T_DSP_, lambda);
+
+    // Calculate the step length
+    double step_length = this->v_x_ref_ * this->T_SSP_ + K_deadbeat.transpose() * (x_hlip_pre_impact_ref - x_hlip_pre_impact);
+
+    // Calculate the desired swing foot references
+    this->swf_pos_x_end_ = step_length;
+    this->swf_pos_x_middle_ = (this->swf_pos_x_end_ + swf_pos_x_init_) / 2.0;
+    this->t_swf_pos_x_middle_ = this->T_SSP_ / 2.0;
+    std::vector<double> swf_x_coeffs = CalculateSwfXCoeffs(this->swf_pos_x_init_, this->swf_vel_x_init_, 
+                                                    this->swf_pos_x_end_, this->swf_vel_x_end_, 
+                                                    this->swf_pos_x_middle_, this->t_swf_pos_x_middle_, 
+                                                    this->T_SSP_);
+
+    this->swf_pos_z_middle_ = 0.15;
+    this->t_swf_pos_z_middle_ = this->T_SSP_ / 2.0;
+    std::vector<double> swf_z_coeffs = CalculateSwfZCoeffs(this->swf_pos_z_init_, this->swf_vel_z_init_, 
+                                                    this->swf_pos_z_end_, this->swf_vel_z_end_, 
+                                                    this->swf_pos_z_middle_, this->t_swf_pos_z_middle_, 
+                                                    this->T_SSP_);
+
+    // Calculate the desired swing foot positions
+    double swf_pos_x_des = GetSwfPosXRef(swf_x_coeffs, t_step);
+    double swf_pos_z_des = GetSwfPosZRef(swf_z_coeffs, t_step);
+
+    // Calculate the desired swing foot velocities
+    double swf_vel_x_des = GetSwfVelXRef(swf_x_coeffs, t_step);
+    double swf_vel_z_des = GetSwfVelZRef(swf_z_coeffs, t_step);
+
+    // Blend the desired swing foot positions and velocities
+    double tau_phase = t_step / this->T_SSP_;
+
+    // The current swing foot position
+    double swf_pos_x_curr = y_stf_frame(OutputIDX::SWF_POS_X);
+    double swf_pos_z_curr = y_stf_frame(OutputIDX::SWF_POS_Z);
+
+    // The current swing foot velocity
+    double swf_vel_x_curr = y_dot_stf_frame(OutputIDX::SWF_POS_X);
+    double swf_vel_z_curr = y_dot_stf_frame(OutputIDX::SWF_POS_Z);
+
+    double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * swf_pos_x_des;
+    double swf_pos_z_ref = (1.0 - tau_phase) * swf_pos_z_curr + tau_phase * swf_pos_z_des;
+
+    double swf_vel_x_ref = (1.0 - tau_phase) * swf_vel_x_curr + tau_phase * swf_vel_x_des;
+    double swf_vel_z_ref = (1.0 - tau_phase) * swf_vel_z_curr + tau_phase * swf_vel_z_des;
+
+    // Set the output references
+    Eigen::Vector<double, N_OUTPUTS> y_ref_stf_frame;
+    y_ref_stf_frame(OutputIDX::COM_POS_X) = y_stf_frame(OutputIDX::COM_POS_X);
+    y_ref_stf_frame(OutputIDX::COM_POS_Z) = this->com_pos_z_ref_;
+    y_ref_stf_frame(OutputIDX::COM_THETA) = this->com_theta_ref_;
+    y_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_pos_x_ref;
+    y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_ref;
+
+    // Calculate the desired joint angles
+    q_pos_ref = SolveIK(y_ref_stf_frame);
+
+    // Calculate the desired joint velocities
+    q_vel_ref = Eigen::Vector<double, N_Q>::Zero();
+
+    // Calculate the desired joint torques
+    q_tor_ref = Eigen::Vector<double, N_Q>::Zero();
+}
+
+Eigen::Vector<double, 4> Controller::CalculateMotorTorques(Eigen::Vector<double, N_Q> q_pos, 
+                                                            Eigen::Vector<double, N_Q> q_vel,
+                                                            Eigen::Vector<double, N_Q> q_pos_ref, 
+                                                            Eigen::Vector<double, N_Q> q_vel_ref,
+                                                            Eigen::Vector<double, N_Q> q_tor_ref)
+{
+    Eigen::Vector<double, 4> q_motor_torques;
+    
+    q_motor_torques(0) = this->kp_knee_ * (q_pos_ref(1) - q_pos(1)) + this->kd_knee_ * (q_vel_ref(1) - q_vel(1)) + q_tor_ref(1);
+    q_motor_torques(1) = this->kp_hip_ * (q_pos_ref(2) - q_pos(2)) + this->kd_hip_ * (q_vel_ref(2) - q_vel(2)) + q_tor_ref(2);
+    q_motor_torques(2) = this->kp_hip_ * (q_pos_ref(3) - q_pos(3)) + this->kd_hip_ * (q_vel_ref(3) - q_vel(3)) + q_tor_ref(3);
+    q_motor_torques(3) = this->kp_knee_ * (q_pos_ref(4) - q_pos(4)) + this->kd_knee_ * (q_vel_ref(4) - q_vel(4)) + q_tor_ref(4);
+
+    return q_motor_torques;
 }
