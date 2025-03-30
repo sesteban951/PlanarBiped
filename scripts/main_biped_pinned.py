@@ -66,6 +66,9 @@ class BipedSimulation:
         # Stance foot position in the world frame
         self.p_stf_world = 0.0
 
+        # Swing foot position at the beginning of the step
+        self.p_swf_x_world_step_start = 0.0
+
         # desired COM state
         self.v_joystick = 0.0                      # (when joystick is available) 
         self.v_des_const = config["HLIP"]["v_des"] # (when joystick is not available)
@@ -409,10 +412,82 @@ class BipedSimulation:
 
     def CalculateJointCommands(self):
 
-        # Compute the current phase
+        # Calculate the phasing variable
         tau_phase = self.T_phase / self.T_SSP
 
+        # Calculate the current outputs
+        y_out = self.CalculateOutputs()  # [p_x_base_W, p_z_base_W, pitch_base_W, p_x_swf_W, p_z_swf_W]
+        y_dot_out = self.CalculateOutputDerivatives()
 
+        self.T_phase = 0.50
+
+
+
+        # Compute the foot placement
+        self.compute_foot_placement()
+
+        # Compute the desired swing foot x outputs
+        swf_pos_x_init = self.p_swf_x_world_step_start
+        swf_vel_x_init = 0
+        swf_pos_x_end = self.p_stf_world + self.u
+        swf_vel_x_end = 0
+        swf_pos_x_middle = (swf_pos_x_init + swf_pos_x_end) / 2.0
+        t_swf_pos_x_middle = self.T_SSP / 2.0 
+
+        # Compute the coefficients for the swing foot x trajectory
+        swf_x_coeffs = self.CalculateSwfXCoeffs(swf_pos_x_init, swf_vel_x_init, swf_pos_x_end, swf_vel_x_end, swf_pos_x_middle, t_swf_pos_x_middle, self.T_SSP)
+
+        # Compute the desired swing foot x reference position and velocity
+        swf_pos_x_des = self.GetSwfPosXRef(swf_x_coeffs, self.T_phase)
+        swf_vel_x_des = self.GetSwfVelXRef(swf_x_coeffs, self.T_phase)
+
+        # Get the current swing foot x position and velocity from the outputs
+        swf_pos_x_curr = y_out[3]
+        swf_vel_x_curr = y_dot_out[3] 
+
+        # Compute the blended swing foot x position and velocity trajectories
+        swf_pos_x_ref = swf_pos_x_curr * (1 - tau_phase) + swf_pos_x_des * tau_phase
+        swf_vel_x_ref = swf_vel_x_curr * (1 - tau_phase) + swf_vel_x_des * tau_phase
+
+
+
+        # Compute the desired swing foot z outputs
+        swf_pos_z_init = 0
+        swf_vel_z_init = 0
+        swf_pos_z_end = 0
+        swf_vel_z_end = 0
+        swf_pos_z_max = 0.1
+        t_swf_pos_z_max = self.T_SSP / 2.0
+        t_swf_pos_z_end = self.T_SSP
+
+        # Compute the coefficients for the swing foot z trajectory
+        swf_z_coeffs = self.CalculateSwfZCoeffs(swf_pos_z_init, swf_vel_z_init, swf_pos_z_end, swf_vel_z_end, swf_pos_z_max, t_swf_pos_z_max, t_swf_pos_z_end)
+
+        # Compute the desired swing foot z reference position and velocity
+        swf_pos_z_des = self.GetSwfPosZRef(swf_z_coeffs, self.T_phase)
+        swf_vel_z_des = self.GetSwfVelZRef(swf_z_coeffs, self.T_phase)
+
+        # Get the current swing foot z position and velocity from the outputs
+        swf_pos_z_curr = y_out[4]
+        swf_vel_z_curr = y_dot_out[4]
+
+        # Compute the blended swing foot z position and velocity trajectories
+        swf_pos_z_ref = swf_pos_z_curr * (1 - tau_phase) + swf_pos_z_des * tau_phase
+        swf_vel_z_ref = swf_vel_z_curr * (1 - tau_phase) + swf_vel_z_des * tau_phase
+
+
+        
+        # Compute the desired base outputs
+        com_pos_x_ref = y_out[0]
+        com_pos_z_ref = self.z_0
+        com_theta_ref = self.theta_des
+
+
+
+        # Collect the outputs for the IK solver
+        #y_ik = np.array([com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]).reshape(5, 1)  # [com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]
+
+        # Obtain the joint position references
 
 
     # This function computes the forward kinematics for the pinned biped model
@@ -546,7 +621,69 @@ class BipedSimulation:
 
         # Return the Jacobian matrix
         return J
+
+    def CalculateSwfXCoeffs(self, swf_pos_x_init, swf_vel_x_init, swf_pos_x_end, swf_vel_x_end, swf_pos_x_middle, t_swf_pos_x_middle, T_SSP):
+        """Compute coefficients [a, b, c, d, e] of the 4th order polynomial."""
+        # Set up the matrix A for boundary conditions
+        A = np.array([
+            [0, 0, 0, 0, 1],                  # p(0) = swf_pos_x_init
+            [0, 0, 0, 1, 0],                  # p'(0) = swf_vel_x_init = 0
+            [T_SSP**4, T_SSP**3, T_SSP**2, T_SSP, 1],  # p(T) = swf_pos_x_end
+            [4*T_SSP**3, 3*T_SSP**2, 2*T_SSP, 1, 0],  # p'(T) = swf_vel_x_end = 0
+            [t_swf_pos_x_middle**4, t_swf_pos_x_middle**3, t_swf_pos_x_middle**2, t_swf_pos_x_middle, 1]  # p(t_middle) = swf_pos_x_middle
+        ])
+
+        # Set up the boundary condition vector B
+        B = np.array([swf_pos_x_init, swf_vel_x_init, swf_pos_x_end, swf_vel_x_end, swf_pos_x_middle])
+
+        # Solve the system of linear equations to find the coefficients
+        coeffs = np.linalg.solve(A, B)
+        return coeffs  # [a, b, c, d, e]
+
+    def GetSwfPosXRef(self, coeffs, t):
+        """Evaluate the position of the swing foot X polynomial at time t."""
+        # Extract the polynomial coefficients (a, b, c, d, e)
+        a, b, c, d, e = coeffs
         
+        # Polynomial equation p(t) = a*t^4 + b*t^3 + c*t^2 + d*t + e
+        position = a * t**4 + b * t**3 + c * t**2 + d * t + e
+        return position
+
+    def GetSwfVelXRef(self, coeffs, t):
+        """Evaluate the velocity of the swing foot X polynomial at time t."""
+        # Extract the polynomial coefficients (a, b, c, d, e)
+        a, b, c, d, e = coeffs
+        
+        # Derivative of the polynomial equation p'(t) = 4*a*t^3 + 3*b*t^2 + 2*c*t + d
+        velocity = 4 * a * t**3 + 3 * b * t**2 + 2 * c * t + d
+        return velocity
+
+    def CalculateSwfZCoeffs(self, x0, v0, xf, vf, x_max, t_max, T):
+        """Compute coefficients [a, b, c, d, e] of the 4th order polynomial."""
+        A = np.array([
+            [0, 0, 0, 0, 1],              # p(0) = x0
+            [0, 0, 0, 1, 0],              # p'(0) = v0
+            [T**4, T**3, T**2, T, 1],      # p(T) = xf
+            [4*T**3, 3*T**2, 2*T, 1, 0],  # p'(T) = vf
+            [t_max**4, t_max**3, t_max**2, t_max, 1]  # p(t_max) = x_max
+        ])
+
+        B = np.array([x0, v0, xf, vf, x_max])
+
+        # Solve the system (now A is square 5x5)
+        coeffs = np.linalg.solve(A, B)
+        return coeffs  # [a, b, c, d, e]
+
+    def GetSwfPosZRef(self, coeffs, t):
+        """Evaluate the 4th order polynomial at time t."""
+        a, b, c, d, e = coeffs
+        return a*t**4 + b*t**3 + c*t**2 + d*t + e
+
+
+    def GetSwfVelZRef(self, coeffs, t):
+        """Evaluate the derivative of the polynomial at time t."""
+        a, b, c, d, _ = coeffs  # Ignore e since it disappears in differentiation
+        return 4*a*t**3 + 3*b*t**2 + 2*c*t + d
 
     # compute the forward kinematics in WORLD Frame
     def compute_forward_kinematics(self):
@@ -715,6 +852,46 @@ class BipedSimulation:
     
     ############################################### AUX FUNC ######################################
 
+    def SolveIK(self, y):
+
+        com_pos_x = y[0]
+        com_pos_z = y[1]
+        com_theta = y[2]
+        swf_pos_x = y[3]
+        swf_pos_z = y[4]
+
+        L_stf = np.sqrt(com_pos_x**2 + com_pos_z**2)  # Distance from CoM to stance foot (stf)
+
+        beta_stf = np.arccos((self.l1**2 + self.l2**2 - L_stf**2) / (2 * self.l1 * self.l2))  # Angle for the stance foot
+
+        q_stf_knee = beta_stf - np.pi  # Knee angle for the stance foot (stf)
+
+        mu = np.arctan2(com_pos_x, com_pos_z)
+
+        gamma = np.arcsin((self.l1 / L_stf) * np.sin(beta_stf)) 
+
+        q_stf_ankle = mu + gamma  # Ankle angle for the stance foot (stf)
+
+        q_stf_hip = -(q_stf_ankle + q_stf_knee) + com_theta
+
+        # Swing leg
+        L_swf = np.sqrt((swf_pos_x - com_pos_x)**2 + (swf_pos_z - com_pos_z)**2)
+
+        beta_swf = np.acos((self.l1**2 + self.l2**2 - L_swf**2) / (2 * self.l1 * self.l2))
+
+        q_swf_knee = np.pi - beta_swf
+
+        gamma_swf = np.arcsin((self.l2 / L_swf) * np.sin(beta_swf))
+
+        alpha_swf = np.arctan2(-(swf_pos_x - com_pos_x), (com_pos_z - swf_pos_z))
+        
+        q_swf_hip = alpha_swf - com_theta - gamma_swf 
+
+        # Store the joint angles in a vector
+        q_pos = np.array([q_stf_ankle,  q_stf_knee, q_stf_hip, q_swf_hip, q_swf_knee]).reshape(5,) 
+
+        return q_pos
+
     # to see where the COM is in the simulation
     def update_com_visualization(self):
         p_com_flat = np.ravel(self.p_com)
@@ -832,8 +1009,12 @@ class BipedSimulation:
             self.joystick.init()
             self.joystick_available = True
 
+        time = 0.0
+
         # Main simulation loop
         while (not glfw.window_should_close(window)) and (self.sim_time < self.max_sim_time):
+
+            time += self.dt_sim  # Increment the simulation time
 
             # update the simulation time
             self.sim_time = self.data.time
@@ -850,6 +1031,47 @@ class BipedSimulation:
             # update the COM state
             self.UpdateCOMPosWorldFrame()
             self.UpdateHLIPState()
+
+            # Calculate the joint commands
+            self.CalculateJointCommands()
+
+            # Set the outputs (array of 5 elements)
+            y_ik = np.array([0.3, 0.7, 0.3, 0.6, 0.1 + 0.1*np.sin(time)])
+
+            q_pos = self.SolveIK(y_ik)
+
+            # Set the mujoco joint positions based on the IK solution
+            # Update the joint positions in the simulation
+            self.data.qpos[0] = q_pos[0]  # q_stf_ankle
+            self.data.qpos[1] = q_pos[1]  # q_stf_knee
+            self.data.qpos[2] = q_pos[2]  # q_stf_hip
+            self.data.qpos[3] = q_pos[3]  # q_swf_hip
+            self.data.qpos[4] = q_pos[4]  # q_swf_knee
+
+            # Get body indices
+            stf_body_idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "stance_foot")
+            swf_body_idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "swing_foot")
+            torso_body_idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "torso")
+
+            # Check if indices are valid
+            if stf_body_idx == -1:
+                raise ValueError("Error: Could not find body 'stance_foot'")
+            if swf_body_idx == -1:
+                raise ValueError("Error: Could not find body 'swing_foot'")
+            if torso_body_idx == -1:
+                raise ValueError("Error: Could not find body 'torso'")
+
+            # Get world positions using xpos
+            stf_pos_world = self.data.xpos[stf_body_idx]  # [x, y, z]
+            swf_pos_world = self.data.xpos[swf_body_idx]  # [x, y, z]
+            torso_pos_world = self.data.xpos[torso_body_idx]  # [x, y, z]
+
+            # Print positions for debugging
+            print(f"Stance Foot Position (World): {stf_pos_world}")
+            print(f"Swing Foot Position (World): {swf_pos_world}")
+            print(f"Torso Position (World): {torso_pos_world}")
+
+
             
             #self.update_com_state()
             #self.update_hlip_state()
