@@ -16,14 +16,10 @@ SIM:
 INIT:
 
     # Initial position of the robot
-    q0: [0.0, 1.1,            # position x and z 
-         0.0,                 # theta body
-         0.0, 0.0, 0.0, 0.0]  # q_HL, q_KL, q_HR, q_KR
+    q0: [0.0, 0.0, 0.0, 0.0, 0.0]
     
     # Initial velocity of the robot
-    v0: [0.0, 0.0,           
-         0.0,
-         0.0, 0.0, 0.0, 0.0]
+    v0: [0.0, 0.0, 0.0, 0.0, 0.0]
 
 #################################################################
 
