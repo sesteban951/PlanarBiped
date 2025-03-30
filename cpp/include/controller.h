@@ -11,10 +11,16 @@
 class Controller 
 {
     public: Controller();
-    
-    void computeControl();  // Example function
 
     Eigen::Vector<double, N_Q> SolveIK(Eigen::Vector<double, N_OUTPUTS> y_ref);
+
+    Eigen::Vector<double, N_OUTPUTS> CalculateOutputsInStanceFootFrame(Eigen::Vector<double, N_Q> q_pos);
+
+    Eigen::Vector<double, N_OUTPUTS> CalculateOutputsInWorldFrame(Eigen::Vector<double, N_Q> q_pos);
+
+    void UpdateController(Eigen::Vector<double, N_Q> q_pos, 
+                            Eigen::Vector<double, N_Q> q_vel,
+                            double t_step);
 
     // Model parameters
     private: double l_thigh_ = 0.5;
@@ -25,6 +31,8 @@ class Controller
 
     private: double T_SSP_ = 0.5;
     private: double T_DSP_ = 0.2;
+
+    private: double p_x_stf_world_frame_ = 0.0;
 
 };
 

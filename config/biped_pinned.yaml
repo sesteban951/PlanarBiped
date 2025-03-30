@@ -67,23 +67,23 @@ JOYSTICK:
 GAINS:
     
     # hip torques
-    kp_H: 500.0
-    kd_H: 40.0
+    kp_H: 10.0
+    kd_H: 1.0
 
     # knee torques
-    kp_K: 500.0
-    kd_K: 50.0
+    kp_K: 10.0
+    kd_K: 1.0
 
 #################################################################
 
 # camera settings
 CAMERA:
     # camera distance
-    distance: 3.0
+    distance: 4.0
 
     # pz offset from COM
-    pz_com_offset: -0.0
+    pz_com_offset: 10.0
 
     # cmaera orientation
-    elevation: 0.0
+    elevation: -30.0
     azimuth: 90
