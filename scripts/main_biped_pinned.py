@@ -442,8 +442,8 @@ class BipedSimulation:
         swf_vel_x_des = self.GetSwfVelXRef(swf_x_coeffs, self.T_phase)
 
         # Get the current swing foot x position and velocity from the outputs
-        swf_pos_x_curr = y_out[3]
-        swf_vel_x_curr = y_dot_out[3] 
+        swf_pos_x_curr = y_out[3][0]
+        swf_vel_x_curr = y_dot_out[3][0] 
 
         # Compute the blended swing foot x position and velocity trajectories
         swf_pos_x_ref = swf_pos_x_curr * (1 - tau_phase) + swf_pos_x_des * tau_phase
@@ -468,8 +468,8 @@ class BipedSimulation:
         swf_vel_z_des = self.GetSwfVelZRef(swf_z_coeffs, self.T_phase)
 
         # Get the current swing foot z position and velocity from the outputs
-        swf_pos_z_curr = y_out[4]
-        swf_vel_z_curr = y_dot_out[4]
+        swf_pos_z_curr = y_out[4][0]
+        swf_vel_z_curr = y_dot_out[0]
 
         # Compute the blended swing foot z position and velocity trajectories
         swf_pos_z_ref = swf_pos_z_curr * (1 - tau_phase) + swf_pos_z_des * tau_phase
@@ -478,16 +478,15 @@ class BipedSimulation:
 
         
         # Compute the desired base outputs
-        com_pos_x_ref = y_out[0]
+        com_pos_x_ref = y_out[0][0]
         com_pos_z_ref = self.z_0
         com_theta_ref = self.theta_des
 
-
-
         # Collect the outputs for the IK solver
-        #y_ik = np.array([com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]).reshape(5, 1)  # [com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]
+        y_ik = np.array([com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]).reshape(5, 1)  # [com_pos_x_ref, com_pos_z_ref, com_theta_ref, swf_pos_x_ref, swf_pos_z_ref]
 
         # Obtain the joint position references
+        q_joint_pos_ref = self.SolveIK(y_ik)
 
 
     # This function computes the forward kinematics for the pinned biped model
@@ -919,6 +918,7 @@ class BipedSimulation:
 
         # Set camera parameters to track the CoM
         cam.lookat[:] = [self.p_com[0][0], 0, self.p_com[1][0] + self.pz_com_offset]  # Make the camera look at the CoM
+        pass
 
     ############################################### SIMULATION ######################################
 
@@ -1026,7 +1026,7 @@ class BipedSimulation:
                 self.update_joystick()
 
             # update phasing variables
-            self.update_phase()
+            #self.update_phase()
 
             # update the COM state
             self.UpdateCOMPosWorldFrame()
@@ -1036,7 +1036,7 @@ class BipedSimulation:
             self.CalculateJointCommands()
 
             # Set the outputs (array of 5 elements)
-            y_ik = np.array([0.3, 0.7, 0.3, 0.6, 0.1 + 0.1*np.sin(time)])
+            y_ik = np.array([0.1, 0.9, 0.3, 0.6, 0.2])
 
             q_pos = self.SolveIK(y_ik)
 
@@ -1046,7 +1046,7 @@ class BipedSimulation:
             self.data.qpos[1] = q_pos[1]  # q_stf_knee
             self.data.qpos[2] = q_pos[2]  # q_stf_hip
             self.data.qpos[3] = q_pos[3]  # q_swf_hip
-            self.data.qpos[4] = q_pos[4]  # q_swf_knee
+            # self.data.qpos[4] = q_pos[4]  # q_swf_knee
 
             # Get body indices
             stf_body_idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "stance_foot")
