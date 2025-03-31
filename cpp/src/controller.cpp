@@ -329,8 +329,8 @@ Eigen::Vector<double, N_Q> Controller::ResetMapQ(Eigen::Vector<double, N_Q> q_po
     return q_pos_post_impact;
 }
 
-void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Eigen::Vector<double, N_Q> q_vel_pre_impact,
-                                    Eigen::Vector<double, N_Q> &q_pos_post_impact, Eigen::Vector<double, N_Q> &q_vel_post_impact)
+void Controller::ComputeResetMapSimple(Eigen::Vector<double, N_Q> q_pos_pre_impact, Eigen::Vector<double, N_Q> q_vel_pre_impact,
+                                        Eigen::Vector<double, N_Q> &q_pos_post_impact, Eigen::Vector<double, N_Q> &q_vel_post_impact)
 {
     // Calculate the current output velocities
     Eigen::Vector<double, N_OUTPUTS> y_dot_pre_impact_world_frame = CalculateOutputVel(q_pos_pre_impact, q_vel_pre_impact);
@@ -350,6 +350,35 @@ void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Ei
     // Store the swing foot position and velocity
     this->swf_pos_x_init_ = y_post_impact_stf_frame(OutputIDX::SWF_POS_X);
 }
+
+void Controller::ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Eigen::Vector<double, N_Q> q_vel_pre_impact,
+                                    Eigen::Vector<double, N_Q> &q_pos_post_impact, Eigen::Vector<double, N_Q> &q_vel_post_impact)
+{
+    // Compute the output jacobian
+    Eigen::Matrix<double, N_Q, N_OUTPUTS> J = ComputeOutputJacobian(q_pos_pre_impact);
+
+    // Get the swing foot Jacobian
+    Eigen::Matrix<double, 2, 5> J_swf = J.block<2, 5>(OutputIDX::SWF_POS_X, 0);
+
+    // Get the mass matrix
+    Eigen::Matrix<double, N_Q, N_Q> M = this->M_;
+
+    // Get the joint coordinates after impact
+    q_pos_post_impact = ResetMapQ(q_pos_pre_impact);
+
+    // Calculate the impact impulse
+    Eigen::Vector<double, 2> lambda = -(J_swf * M.inverse() * J_swf.transpose()).inverse() * J_swf * q_vel_pre_impact;
+
+    // Calculate the state velocity after impact
+    q_vel_post_impact = q_vel_pre_impact + M.inverse() * J_swf.transpose() * lambda;
+
+    // Calculate outputs after impact
+    Eigen::Vector<double, N_OUTPUTS> y_post_impact_stf_frame = CalculateOutputsInStanceFootFrame(q_pos_post_impact);
+
+    // Store the swing foot position and velocity
+    this->swf_pos_x_init_ = y_post_impact_stf_frame(OutputIDX::SWF_POS_X);
+}
+
 
 Eigen::Vector<double, 3> Controller::GetStfPosWorldFrame()
 {

@@ -64,8 +64,12 @@ class Controller
 
     public: Eigen::Vector<double, N_Q> ResetMapQ(Eigen::Vector<double, N_Q> q_pos);
 
+    public: void ComputeResetMapSimple(Eigen::Vector<double, N_Q> q_pos_pre_impact, Eigen::Vector<double, N_Q> q_vel_pre_impact,
+                                        Eigen::Vector<double, N_Q> &q_pos_post_impact, Eigen::Vector<double, N_Q> &q_vel_post_impact);
+
     public: void ComputeResetMap(Eigen::Vector<double, N_Q> q_pos_pre_impact, Eigen::Vector<double, N_Q> q_vel_pre_impact,
                                     Eigen::Vector<double, N_Q> &q_pos_post_impact, Eigen::Vector<double, N_Q> &q_vel_post_impact);
+
 
     public: Eigen::Vector<double, 3> GetStfPosWorldFrame();
 
@@ -74,6 +78,10 @@ class Controller
     public: double GetBasePosZRef(){return com_pos_z_ref_;}
 
     public: void SetVelRef(double v_x_ref){v_x_ref_ = v_x_ref;}
+
+    private: Eigen::Matrix<double, N_Q, N_Q> M_ = Eigen::Matrix<double, N_Q, N_Q>::Identity();
+
+    public: void SetMassMatrix(Eigen::Matrix<double, N_Q, N_Q> M){M_ = M;}
 
     // Model parameters
     private: double l_thigh_ = 0.5;

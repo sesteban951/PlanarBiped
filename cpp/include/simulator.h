@@ -77,6 +77,8 @@ class Simulator
 
     public: void UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame);
 
+    public: Eigen::Matrix<double, N_Q, N_Q> GetMassMatrix();
+
     public: Eigen::Vector<double, 3> GetTorsoPos();
     public: Eigen::Vector<double, 3> GetTorsoVel();
     public: Eigen::Vector<double, 2> GetStfPos();

@@ -245,6 +245,30 @@ void Simulator::UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_
     mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 }
 
+Eigen::Matrix<double, N_Q, N_Q> Simulator::GetMassMatrix() 
+{
+    int nv = MJ_MODEL_PTR->nv;  // Number of generalized velocities
+
+    Eigen::Matrix<double, N_Q, N_Q> M(nv, nv);  // Eigen matrix to store M(q)
+
+    // Allocate storage for the full mass matrix
+    std::vector<mjtNum> M_full(nv * nv, 0.0);
+    
+    // Compute the full mass matrix
+    mj_fullM(MJ_MODEL_PTR, M_full.data(), MJ_DATA_PTR->qM);
+
+    // Convert the flat MuJoCo mass matrix to Eigen format
+    for (int i = 0; i < nv; ++i) 
+    {
+        for (int j = 0; j < nv; ++j) 
+        {
+            M(i, j) = M_full[i * nv + j];  // Row-major indexing
+        }
+    }
+
+    return M;
+}
+
 void MouseButton(GLFWwindow* window, int button, int act, int mods)
 {
     // update button state

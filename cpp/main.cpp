@@ -90,6 +90,8 @@ int main()
             Eigen::Vector<double, N_Q> q_pos = simulator.GetGeneralizedPosition();
             Eigen::Vector<double, N_Q> q_vel = simulator.GetGeneralizedVelocity();
 
+            controller.SetMassMatrix(simulator.GetMassMatrix());
+
             // Calculate outputs in the world frame
             Eigen::Vector<double, N_OUTPUTS> y_world_frame = controller.CalculateOutputsInWorldFrame(q_pos);
             Eigen::Vector<double, N_OUTPUTS> y_dot_world_frame = controller.CalculateOutputVel(q_pos, q_vel);
@@ -156,15 +158,15 @@ int main()
                 }
                 else if(t_curr < 5.0)
                 {
-                    controller.SetVelRef(0.3);
+                    controller.SetVelRef(0.0);
                 }
                 else if(t_curr < 10.0)
                 {
-                    controller.SetVelRef(0.6);
+                    controller.SetVelRef(0.0);
                 }
                 else
                 {
-                    controller.SetVelRef(0.6);
+                    controller.SetVelRef(0.0);
                 }
             }
 
