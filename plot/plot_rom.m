@@ -201,3 +201,32 @@ plot(data.z_1(idx), data.z_1_dot(idx));
 xlabel('$z$', 'Interpreter', 'latex');
 ylabel('$\dot{z}$', 'Interpreter', 'latex');
 set(gcf, 'Position', [0, 900, 960, 450]);
+
+%% Plot the zero dynamics states
+figure(5);
+
+n_rows = 4;
+n_cols = 1;
+n = 0;
+
+% z1
+n = n + 1;
+subplot(n_rows, n_cols, n);
+hold on;
+grid on;
+plot(data.t(idx), data.y_1(idx), 'b.');
+title('$p$', 'Interpreter', 'latex');
+xlabel('$t$', 'Interpreter', 'latex');
+ylabel('$p$', 'Interpreter', 'latex');
+
+% z_dot
+n = n + 1;
+subplot(n_rows, n_cols, n);
+hold on;
+grid on;
+plot(data.t(idx), data.y_dot_1(idx), 'b.');
+title('$\dot{v}$', 'Interpreter', 'latex');
+xlabel('$t$', 'Interpreter', 'latex');
+ylabel('$\dot{v}$', 'Interpreter', 'latex');
+
+set(gcf, 'Position', [0, -200, 960, 450]);

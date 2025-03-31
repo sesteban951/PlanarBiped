@@ -159,12 +159,16 @@ int main()
                 // Update the stance foot position in the simulator
                 simulator.UpdateStanceFootPosition(stf_pos_world_frame);
 
+                q_pos = q_pos_post_impact;
+                q_vel = q_vel_post_impact;
+
                 if(t_curr < 3.0)
                 {
                     controller.SetVelRef(0.0);
                 }
                 else if(t_curr < 6.0)
                 {
+                    //exit(0);
                     controller.SetVelRef(0.5);
                 }
                 else
