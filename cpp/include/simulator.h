@@ -77,7 +77,17 @@ class Simulator
 
     public: void UpdateStanceFootPosition(Eigen::Vector<double, 3> stf_pos_world_frame);
 
+    public: Eigen::Vector<double, 3> ComputeGlobalCoM(); 
+
+    public: void UpdateGeomPosition(const std::string& geom_name, Eigen::Vector<double, 3> pos);
+
     public: Eigen::Matrix<double, N_Q, N_Q> GetMassMatrix();
+
+    public: void PropagateDynamics();
+
+    public: void VisualizeSphere(Eigen::Vector<double, 3> position,
+                                    double radius,
+                                    Eigen::Vector<double, 4> color_rgba);
 
     public: Eigen::Vector<double, 3> GetTorsoPos();
     public: Eigen::Vector<double, 3> GetTorsoVel();
@@ -98,6 +108,8 @@ class Simulator
 
     private: int sensor_swf_pos_idx_;
     private: int sensor_swf_vel_idx_;
+
+    private: Eigen::Vector<double, 3> com_pos_ = Eigen::Vector<double, 3>::Zero();
 
 };
 

@@ -198,9 +198,11 @@ int main()
             Eigen::Matrix<double, 1, 5> N = Eigen::Matrix<double, 1, 5>::Zero();
             N(0, 0) = 1.0;
 
+            Eigen::Matrix<double, N_Q, N_Q> M = simulator.GetMassMatrix();
+
             Eigen::Vector<double, 2> z;
             z(0) = N * q_pos;
-            z(1) = N * q_vel;
+            z(1) = N * M * q_vel;
 
             Eigen::Vector<double, Eigen::Dynamic> log_data(21);
             log_data << t_curr, q_pos, q_vel, eta, z;
@@ -210,8 +212,7 @@ int main()
 
 
             // Step the Mujoco simulation
-            mj_step(MJ_MODEL_PTR, MJ_DATA_PTR);
-            mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
+            simulator.PropagateDynamics();
 
             // Update the last simulation time
             last_sim_time = now;

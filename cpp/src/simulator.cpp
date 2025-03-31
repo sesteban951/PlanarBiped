@@ -129,6 +129,9 @@ void Simulator::UpdateScene()
     // update scene and render
     mjv_updateScene(MJ_MODEL_PTR, MJ_DATA_PTR, &(MJ_OPTIONS), NULL, &MJ_CAMERA, mjCAT_ALL, &MJ_SCENE);
 
+    // Visualize the com
+    VisualizeSphere(this->com_pos_, 0.04, Eigen::Vector<double, 4>(1, 0, 0, 1));
+
     // Update the visualization
     mjr_render(viewport, &MJ_SCENE, &MJ_CONTEXT);
 
@@ -142,6 +145,33 @@ void Simulator::UpdateScene()
 
     // process pending GUI events, call GLFW callbacks
     glfwPollEvents();
+}
+
+void Simulator::VisualizeSphere(Eigen::Vector<double, 3> position,
+                                double radius,
+                                Eigen::Vector<double, 4> color_rgba)
+{
+    // Create the sphere geom
+    mjvGeom* sphere_geom = MJ_SCENE.geoms + MJ_SCENE.ngeom++;
+
+    // Initialize the sphere geom
+    mjv_initGeom(sphere_geom, mjGEOM_SPHERE, NULL, NULL, NULL, NULL);
+
+    // Set the radius of the sphere
+    sphere_geom->size[0] = radius;
+    sphere_geom->size[1] = radius;
+    sphere_geom->size[2] = radius;
+
+    // Set the position of the sphere
+    sphere_geom->pos[0] = position(0);
+    sphere_geom->pos[1] = position(1);
+    sphere_geom->pos[2] = position(2);
+
+    // Set the color of the sphere
+    sphere_geom->rgba[0] = color_rgba(0);
+    sphere_geom->rgba[1] = color_rgba(1);
+    sphere_geom->rgba[2] = color_rgba(2);
+    sphere_geom->rgba[3] = color_rgba(3);
 }
 
 void Simulator::SetState(Eigen::Vector<double, N_Q> q_pos)
@@ -267,6 +297,57 @@ Eigen::Matrix<double, N_Q, N_Q> Simulator::GetMassMatrix()
     }
 
     return M;
+}
+
+Eigen::Vector<double, 3> Simulator::ComputeGlobalCoM() 
+{
+    Eigen::Vector3d com(0, 0, 0);  // Initialize CoM position
+    double total_mass = 0.0;
+
+    for (int i = 0; i < MJ_MODEL_PTR->nbody; ++i) 
+    {
+        double mass = MJ_MODEL_PTR->body_mass[i];  // Mass of body i
+        Eigen::Vector3d pos(MJ_DATA_PTR->xipos[3 * i], MJ_DATA_PTR->xipos[3 * i + 1], MJ_DATA_PTR->xipos[3 * i + 2]);  // Global CoM position
+
+        com += mass * pos;  // Weighted sum
+        total_mass += mass;
+    }
+
+    if (total_mass > 0.0)
+    {
+        com /= total_mass;  // Normalize by total mass
+    }
+    else
+    {
+        std::cerr << "Error: Total mass is zero!" << std::endl;
+    }
+
+    return com;
+}
+
+// Function to update the position of a geom dynamically
+void Simulator::UpdateGeomPosition(const std::string& geom_name, Eigen::Vector<double, 3> pos) 
+{
+    int geom_id = mj_name2id(MJ_MODEL_PTR, mjOBJ_GEOM, geom_name.c_str());
+    if (geom_id == -1) 
+    {
+        std::cerr << "Geom not found: " << geom_name << std::endl;
+        exit(1);
+        return;
+    }
+
+    // Update the position of the geom (xgeom stores the global position)
+    MJ_DATA_PTR->geom_xpos[3 * geom_id]     = pos(0);
+    MJ_DATA_PTR->geom_xpos[3 * geom_id + 1] = pos(1);
+    MJ_DATA_PTR->geom_xpos[3 * geom_id + 2] = pos(2);
+}
+
+void Simulator::PropagateDynamics()
+{
+    this->com_pos_ = this->ComputeGlobalCoM();
+
+    mj_step(MJ_MODEL_PTR, MJ_DATA_PTR);
+    mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 }
 
 void MouseButton(GLFWwindow* window, int button, int act, int mods)
