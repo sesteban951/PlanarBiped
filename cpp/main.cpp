@@ -64,6 +64,9 @@ int main()
     Eigen::Vector<double, N_Q> q_vel_ref = simulator.GetGeneralizedVelocity();
     Eigen::Vector<double, N_Q> q_tor_ref = Eigen::Vector<double, N_Q>::Zero();
 
+    double alpha = 0.999;
+    double com_vel_x_filtered = 0.0;
+
     while (true)
     {
         // Get current time
@@ -122,6 +125,9 @@ int main()
             std::cout << "swf_vel_z: " << swf_vel_world(1) << "\t";
             std::cout << std::endl;
 
+            com_vel_x_filtered = alpha * com_vel_x_filtered + (1.0 - alpha) * y_dot_world_frame(OutputIDX::COM_POS_X);
+            std::cout << "com_vel_x_filtered: " << com_vel_x_filtered << std::endl;
+
             // Check for step update + reset map
             bool update_stance_foot = controller.CheckForStanceFootUpdate(t_curr, q_pos, q_vel);
 
@@ -148,17 +154,17 @@ int main()
                 {
                     controller.SetVelRef(0.0);
                 }
-                else if(t_curr < 4.0)
+                else if(t_curr < 5.0)
                 {
-                    controller.SetVelRef(0.25);
+                    controller.SetVelRef(0.3);
                 }
-                else if(t_curr < 6.0)
+                else if(t_curr < 10.0)
                 {
-                    controller.SetVelRef(0.5);
+                    controller.SetVelRef(0.6);
                 }
                 else
                 {
-                    controller.SetVelRef(0.75);
+                    controller.SetVelRef(0.6);
                 }
             }
 
