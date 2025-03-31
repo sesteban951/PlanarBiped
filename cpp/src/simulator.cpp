@@ -135,10 +135,10 @@ void Simulator::UpdateScene()
     // Update the visualization
     mjr_render(viewport, &MJ_SCENE, &MJ_CONTEXT);
 
-    // // // Make the camera follow the robot
-    // MJ_CAMERA.lookat[0] = MJ_DATA_PTR->qpos[0];
-    // MJ_CAMERA.lookat[1] = MJ_DATA_PTR->qpos[1];
-    // MJ_CAMERA.lookat[2] = MJ_DATA_PTR->qpos[2];
+    // Make the camera follow the robot
+    MJ_CAMERA.lookat[0] = this->com_pos_[0];
+    MJ_CAMERA.lookat[1] = this->com_pos_[1];
+    MJ_CAMERA.lookat[2] = this->com_pos_[2];
 
     // swap OpenGL buffers (blocking call due to v-sync)
     glfwSwapBuffers(window);

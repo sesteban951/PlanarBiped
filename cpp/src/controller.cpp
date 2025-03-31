@@ -394,7 +394,7 @@ bool Controller::CheckForStanceFootUpdate(double t_curr, Eigen::Vector<double, N
     double t_step = t_curr - this->t_step_start_;
 
     // Check if the swing foot has touched the ground
-    if((t_step > this->T_SSP_ * 0.8) && y_world_frame(OutputIDX::SWF_POS_Z) < 0.001)
+    if((t_step > this->T_SSP_ * 0.95) && y_world_frame(OutputIDX::SWF_POS_Z) < 0.001)
     {
         std::cout << "Foot switch detected!" << std::endl;
 
@@ -466,7 +466,7 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
                                                     this->swf_pos_x_middle_, this->t_swf_pos_x_middle_, 
                                                     this->T_SSP_);
 
-    this->swf_pos_z_middle_ = 0.20;
+    this->swf_pos_z_middle_ = 0.15;
     this->t_swf_pos_z_middle_ = this->T_SSP_ / 2.0;
     std::vector<double> swf_z_coeffs = CalculateSwfZCoeffs(this->swf_pos_z_init_, this->swf_vel_z_init_, 
                                                     this->swf_pos_z_end_, this->swf_vel_z_end_, 

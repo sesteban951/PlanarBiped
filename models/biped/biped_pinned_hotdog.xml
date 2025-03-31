@@ -56,7 +56,7 @@
 					<body name="torso" pos="0 0 0.5">
 						<site name="torso_imu" size="0.01" pos="0 0 0" />
 						<joint name="stance_hip_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-3.14 3.14" damping="0.1"/>
-						<geom name="torso" type="capsule" size="0.075 0.25" pos="0 0 0.25" material="torso_color" conaffinity="0" contype="0" density="500"/>
+						<geom name="torso" type="capsule" size="0.075 0.3" pos="0 0 0.3" material="torso_color" conaffinity="0" contype="0" density="500"/>
 
 						<body name="swing_upper_leg" pos="0 0 0">
 							<!-- Swing leg upper part -->
