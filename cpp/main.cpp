@@ -25,7 +25,7 @@ int main()
 
     logger.AddLabels(log_labels);
 
-    simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned.xml");
+    simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned_hotdog.xml");
 
     double simulation_rate = 500.0;
     double visualization_rate = 60.0;
@@ -163,9 +163,13 @@ int main()
                 {
                     controller.SetVelRef(0.0);
                 }
+                else if(t_curr < 6.0)
+                {
+                    controller.SetVelRef(0.25);
+                }
                 else
                 {
-                    controller.SetVelRef(0.3);
+                    controller.SetVelRef(0.5);
                 }
             }
 
