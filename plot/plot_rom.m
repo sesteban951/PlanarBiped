@@ -7,25 +7,33 @@ clear all; clc; close all;
 file_location = '../data/';
 t = importdata(file_location + "time.csv");
 
-% unpack the output data
+% % unpack the output data
 x = importdata(file_location + "rom_state.csv");
 u = importdata(file_location + "rom_input.csv");
 
 p = x(:,1);
 v = x(:,2);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% data = readtable(file_location + "log.csv");
+% p = data.y_1;
+% v = data.y_dot_1;
+% t = data.t;
 
-% extract some data from the yaml config file
-config_file_path = "../config/biped.yaml";
-config = yaml.loadFile(config_file_path);
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% % extract some data from the yaml config file
+% config_file_path = "../config/biped.yaml";
+% config = yaml.loadFile(config_file_path);
 
 % some parameters
 g = 9.81;
-z0_des = config.HLIP.z0;
-v_des = config.HLIP.v_des;
+% z0_des = config.HLIP.z0;
+z0_des = 0.85;
+% v_des = config.HLIP.v_des;
+v_des = 0.75;
 
-T_SSP = config.HLIP.T_SSP;
+% T_SSP = config.HLIP.T_SSP;
+T_SSP = 0.3;
 T_DSP = 0.0;
 T_tot = T_SSP + T_DSP;
 
@@ -34,13 +42,13 @@ T_tot = T_SSP + T_DSP;
 
 % time window of interest
 % t_interval = [t(1), t(end)];
-t_interval = [t(end) - 2, t(end)];
+t_interval = [t(end) - 5, t(end)];
 idx = find(t >= t_interval(1) & t <= t_interval(2));
 
 t = t(idx);
 p = p(idx);
 v = v(idx);
-u = u(idx);
+% u = u(idx);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % HLIP Theoretical
@@ -101,7 +109,7 @@ end
 figure(1);
 
 % plot the results
-subplot(3, 1, 1);
+subplot(2, 1, 1);
 grid on; hold on;
 yline(0);
 plot(t, p, 'LineWidth', 2);
@@ -109,21 +117,22 @@ xlabel('t (s)');
 ylabel('p (m)');
 title('p = p_c - p_s');
 
-subplot(3, 1, 2);
+subplot(2, 1, 2);
 grid on; hold on;
 yline(0);
-plot(t, v, 'LineWidth', 2);
+% plot(t, v, 'LineWidth', 2);
+plot(t, v, 'b.');
 xlabel('t (s)');
 ylabel('v (m/s)');
 title('v');
 
-subplot(3, 1, 3);
-grid on; hold on;
-yline(0);
-plot(t, u, 'LineWidth', 2);
-xlabel('t (s)');
-ylabel('u (m)');
-title('u');
+% subplot(3, 1, 3);
+% grid on; hold on;
+% yline(0);
+% % plot(t, u, 'LineWidth', 2);
+% xlabel('t (s)');
+% ylabel('u (m)');
+% title('u');
 
 % plot the continuous phase plot
 figure(2);
