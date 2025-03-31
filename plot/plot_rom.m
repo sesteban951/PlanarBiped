@@ -32,6 +32,12 @@ z0_des = 0.85;
 % v_des = config.HLIP.v_des;
 v_des = 1.00;
 
+% The total mass of the robot
+mass = 10.426;
+
+l_thigh = 0.5;
+l_shin = 0.5;
+
 % T_SSP = config.HLIP.T_SSP;
 T_SSP = 0.3;
 T_DSP = 0.0;
@@ -76,6 +82,9 @@ v_minus_H = sigma_P1 * (v_des * T_tot) / (2 + T_DSP * sigma_P1);
 
 % Compute the HLIP trajectory
 [P, V] = GetHLIPPhaseTrajectory(z0_des, g, v_des, T_SSP, T_DSP);
+
+% Convert the HLIP trajectory into zero dynamics
+[Z, Z_dot] = ConvertHLIPToZeroDynamics(P, V, z0_des, l_thigh, l_shin, mass);
 
 % compute some phase plots
 x_max = max([p; p_minus_H]);
@@ -197,7 +206,9 @@ set(gcf, 'Position', [0, -200, 960, 450]);
 %% Phase portrait
 figure(4);
 
+hold on;
 plot(data.z_1(idx), data.z_1_dot(idx));
+plot(Z, Z_dot);
 xlabel('$z$', 'Interpreter', 'latex');
 ylabel('$\dot{z}$', 'Interpreter', 'latex');
 set(gcf, 'Position', [0, 900, 960, 450]);

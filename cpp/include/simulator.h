@@ -85,6 +85,8 @@ class Simulator
 
     public: Eigen::Matrix<double, N_Q, N_Q> GetMassMatrix();
 
+    public: double GetTotalMass();
+
     public: void PropagateDynamics();
 
     public: void VisualizeSphere(Eigen::Vector<double, 3> position,

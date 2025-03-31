@@ -377,6 +377,16 @@ void Simulator::PropagateDynamics()
     mj_forward(MJ_MODEL_PTR, MJ_DATA_PTR);
 }
 
+double Simulator::GetTotalMass() 
+{
+    double total_mass = 0.0;
+    for (int i = 0; i < MJ_MODEL_PTR->nbody; i++) 
+    {
+        total_mass += MJ_MODEL_PTR->body_mass[i];
+    }
+    return total_mass;
+}
+
 void MouseButton(GLFWwindow* window, int button, int act, int mods)
 {
     // update button state

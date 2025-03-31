@@ -4,7 +4,7 @@
 clear; clc; close all;
 
 % import the data
-file_location = '../data/';
+file_location = 'cpp/logs/';
 % t = importdata(file_location + "time.csv");
 
 % % % unpack the output data
@@ -30,10 +30,10 @@ g = 9.81;
 % z0_des = config.HLIP.z0;
 z0_des = 0.85;
 % v_des = config.HLIP.v_des;
-v_des = 0.75;
+v_des = 0.00;
 
 % T_SSP = config.HLIP.T_SSP;
-T_SSP = 0.3;
+T_SSP = 0.4;
 T_DSP = 0.0;
 T_tot = T_SSP + T_DSP;
 
@@ -42,7 +42,7 @@ T_tot = T_SSP + T_DSP;
 
 % time window of interest
 % t_interval = [t(1), t(end)];
-t_interval = [t(end) - 5, t(end)];
+t_interval = [t(end) - 3, t(end)];
 idx = find(t >= t_interval(1) & t <= t_interval(2));
 
 t = t(idx);
@@ -148,15 +148,15 @@ ylabel('v (m/s)');
 % plot the vector fields
 streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
 
+% Plot the HLIP trajectory
+plot(P, V, 'r', 'Linewidth', 2);
+
 % end and start points
 plot(p(1), v(1), 'go', 'MarkerSize', 10, 'LineWidth', 2); % start
 plot(p(end), v(end), 'ro','MarkerSize', 10, 'LineWidth', 2); % end
 
 % HLIP target point
 plot(p_minus_H, v_minus_H, 'pentagram', 'MarkerSize', 10, 'LineWidth', 2); % target
-
-% Plot the HLIP trajectory
-plot(P, V, 'r', 'Linewidth');
 
 % plot the actual trajectory
 plot(p, v, 'k', 'LineWidth', 2);

@@ -27,6 +27,10 @@ int main()
 
     simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned_hotdog.xml");
 
+    // double mass = simulator.GetTotalMass();
+    // std::cout << "Total mass: " << mass << std::endl;
+    // exit(0);
+
     double simulation_rate = 1000.0;
     double visualization_rate = 60.0;
 
