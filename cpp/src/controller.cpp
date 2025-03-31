@@ -478,7 +478,10 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     double swf_vel_z_des = GetSwfVelZRef(swf_z_coeffs, t_step);
 
     // Blend the desired swing foot positions and velocities
-    double tau_phase = t_step / this->T_SSP_;
+    double tau_phase = std::clamp(t_step / (this->T_SSP_ * 0.6), 0.0, 1.0);
+    
+    
+    t_step / this->T_SSP_;
 
     // The current swing foot position
     double swf_pos_x_curr = y_stf_frame(OutputIDX::SWF_POS_X);
@@ -503,13 +506,21 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     y_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_pos_x_ref;
     y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_des;
 
-
-
     // Calculate the desired joint angles
     q_pos_ref = SolveIK(y_ref_stf_frame);
 
+
+
+    // Set the output velocity references
+    Eigen::Vector<double, N_OUTPUTS> y_dot_ref_stf_frame;
+    y_dot_ref_stf_frame(OutputIDX::COM_POS_X) = y_dot_stf_frame(OutputIDX::COM_POS_X);
+    y_dot_ref_stf_frame(OutputIDX::COM_POS_Z) = 0.0;
+    y_dot_ref_stf_frame(OutputIDX::COM_THETA) = 0.0;
+    y_dot_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_vel_x_ref;
+    y_dot_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_vel_z_des;
+
     // Calculate the desired joint velocities
-    q_vel_ref = Eigen::Vector<double, N_Q>::Zero();
+    q_vel_ref = SolveIKDerivative(y_dot_ref_stf_frame, q_pos);
 
     // Calculate the desired joint torques
     q_tor_ref = Eigen::Vector<double, N_Q>::Zero();

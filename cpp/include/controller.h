@@ -88,18 +88,18 @@ class Controller
     private: double l_shin_ = 0.5;
 
     // Control parameters
-    private: double com_pos_z_ref_ = 0.95;
+    private: double com_pos_z_ref_ = 0.9;
     private: double com_theta_ref_ = 0.0;
 
     private: double T_SSP_ = 0.3;
     private: double T_DSP_ = 0.0;
     private: double g_ = 9.81;
 
-    private: double kp_hip_ = 200.0;
-    private: double kp_knee_ = 200.0;
+    private: double kp_hip_ = 400.0;
+    private: double kp_knee_ = 400.0;
     
-    private: double kd_hip_ = 5.0;
-    private: double kd_knee_ = 5.0;
+    private: double kd_hip_ = 20.0;
+    private: double kd_knee_ = 20.0;
 
     private: double t_step_start_ = 0.0;
 

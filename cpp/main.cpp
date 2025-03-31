@@ -1,6 +1,7 @@
 
 #include "controller.h"
 #include "simulator.h"
+#include "logger.h"
 #include "config.h" 
 
 #include "stdio.h"
@@ -17,6 +18,12 @@ int main()
 
     Controller controller;
     Simulator simulator;
+
+    Logger logger("/home/adrian/PlanarBiped/cpp/logs/log.csv");
+
+    std::string log_labels = "t, q_1, q_2, q_3, q_4, q_5, q_1_dot, q_2_dot, q_3_dot, q_4_dot, q_5_dot, eta_1, eta_2, eta_3, eta_4, eta_1_dot, eta_2_dot, eta_3_dot, eta_4_dot, z_1, z_1_dot,";
+
+    logger.AddLabels(log_labels);
 
     simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned.xml");
 
@@ -152,21 +159,13 @@ int main()
                 // Update the stance foot position in the simulator
                 simulator.UpdateStanceFootPosition(stf_pos_world_frame);
 
-                if(t_curr < 2.0)
-                {
-                    controller.SetVelRef(0.0);
-                }
-                else if(t_curr < 5.0)
-                {
-                    controller.SetVelRef(0.0);
-                }
-                else if(t_curr < 10.0)
+                if(t_curr < 3.0)
                 {
                     controller.SetVelRef(0.0);
                 }
                 else
                 {
-                    controller.SetVelRef(0.0);
+                    controller.SetVelRef(0.3);
                 }
             }
 
@@ -187,31 +186,28 @@ int main()
             // Set the motor torques in the simulator
             simulator.SetMotorTorques(motor_torques);
 
-            // if(std::abs(rem) < 0.001)
-            // {
-            //     std::cout << "Resetting map" << std::endl;
-            //     q_pos = controller.ResetMapQ(q_pos);
 
-            //     // Get the stance foot position in the world frame
-            //     Eigen::Vector<double, 3> stf_pos_world_frame = controller.GetStfPosWorldFrame();
+            // Logging
+            Eigen::Matrix<double, 5, 4> B = Eigen::Matrix<double, 5, 4>::Zero();
+            B.block<4, 4>(1, 0) = Eigen::Matrix<double, 4, 4>::Identity();
 
-            //     // Update the stance foot position in the simulator
-            //     simulator.UpdateStanceFootPosition(stf_pos_world_frame);
+            Eigen::Vector<double, 8> eta;
+            eta.segment<4>(0) = B.transpose() * q_pos;
+            eta.segment<4>(4) = B.transpose() * q_vel;
 
-            //     std::cout << "Stance foot position: " << stf_pos_world_frame.transpose() << std::endl;
+            Eigen::Matrix<double, 1, 5> N = Eigen::Matrix<double, 1, 5>::Zero();
+            N(0, 0) = 1.0;
 
-            //     //exit(0);
-            // }
-            // Eigen::Vector<double, 3> stf_pos_world_frame(t_curr / 5.0, 0.0, 0.0);
-            // //simulator.UpdateStanceFootPosition(stf_pos_world_frame);
+            Eigen::Vector<double, 2> z;
+            z(0) = N * q_pos;
+            z(1) = N * q_vel;
 
-            // // Calculate the outputs in the stf frame
-            // Eigen::Vector<double, N_OUTPUTS> y_stf_frame = controller.CalculateOutputsInStanceFootFrame(q_pos);
+            Eigen::Vector<double, Eigen::Dynamic> log_data(21);
+            log_data << t_curr, q_pos, q_vel, eta, z;
 
-            // std::cout << "y_pos: " << y_stf_frame.transpose() << std::endl;
+            logger.WriteToLog(log_data);
 
-            // // Set the joint positions in the Mujoco data structure
-            // simulator.SetState(q_pos);
+
 
             // Step the Mujoco simulation
             mj_step(MJ_MODEL_PTR, MJ_DATA_PTR);

@@ -32,7 +32,12 @@ add_library(simulator SHARED src/simulator.cpp)
 target_include_directories(simulator PUBLIC include)
 target_link_libraries(simulator PUBLIC glfw ${MUJOCO_LIB})
 
+# Add the logger library
+add_library(logger SHARED src/logger.cpp)
+target_include_directories(logger PUBLIC include)
+target_link_libraries(logger PUBLIC glfw ${MUJOCO_LIB})
+
 # Main executable
 add_executable(demo main.cpp)
 target_include_directories(demo PUBLIC include)
-target_link_libraries(demo controller simulator glfw ${MUJOCO_LIB})
+target_link_libraries(demo controller simulator logger glfw ${MUJOCO_LIB})

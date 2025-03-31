@@ -1,9 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-const double DEFAULT_GAIN = 1.0;
-const double TIME_STEP = 0.01;
-
 const int N_OUTPUTS = 5;
 
 const int N_Q = 5;
