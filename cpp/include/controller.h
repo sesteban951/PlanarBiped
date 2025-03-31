@@ -93,7 +93,7 @@ class Controller
 
     // Control parameters
     private: double com_pos_z_ref_ = 0.85;
-    private: double com_theta_ref_ = 0.0;
+    private: double com_theta_ref_ = 0.14;
 
     private: double T_SSP_ = 0.3;
     private: double T_DSP_ = 0.0;

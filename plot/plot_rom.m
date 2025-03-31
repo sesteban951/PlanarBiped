@@ -30,7 +30,7 @@ g = 9.81;
 % z0_des = config.HLIP.z0;
 z0_des = 0.85;
 % v_des = config.HLIP.v_des;
-v_des = 0.75;
+v_des = 1.00;
 
 % T_SSP = config.HLIP.T_SSP;
 T_SSP = 0.3;
