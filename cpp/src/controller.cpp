@@ -26,6 +26,10 @@ Eigen::Vector<double, N_Q> Controller::SolveIK(Eigen::Vector<double, N_OUTPUTS> 
     double q_stf_hip = -(q_stf_ankle + q_stf_knee) + com_theta;
 
     // Swing leg
+    double L_max = this->l_thigh_ + this->l_shin_;
+    double swf_max = sqrt(L_max * L_max - com_pos_z * com_pos_z);
+    swf_pos_x = std::clamp(swf_pos_x, -swf_max, swf_max);
+
     double L_swf = sqrt((swf_pos_x - com_pos_x) * (swf_pos_x - com_pos_x) + (swf_pos_z - com_pos_z) * (swf_pos_z - com_pos_z));
 
     double beta_swf = acos((this->l_shin_ * this->l_shin_ + this->l_thigh_ * this->l_thigh_ - L_swf * L_swf) / (2.0 * this->l_shin_ * this->l_thigh_));
@@ -288,6 +292,45 @@ double Controller::GetSwfVelZRef(const std::vector<double>& coeffs, double t)
     return 4.0 * coeffs[0] * pow(t, 3) + 3.0 * coeffs[1] * pow(t, 2) + 2.0 * coeffs[2] * t + coeffs[3];
 }
 
+void Controller::CalculateSwfXRef(double tau_phase, double step_length, double &swf_pos_x_ref, double &swf_vel_x_ref)
+{
+    Eigen::Vector<double, 7> coeffs = Eigen::Vector<double, 7>::Zero();
+
+    double x_0 = this->swf_pos_x_init_;
+    double x_f = step_length;
+    double x_m = (x_f - x_0) / 2.0;
+
+    coeffs(0) = x_0;
+    coeffs(1) = x_0;
+    coeffs(2) = x_0;
+    coeffs(3) = x_m;
+    coeffs(4) = x_m;
+    coeffs(5) = x_f;
+    coeffs(6) = x_f;
+
+    swf_pos_x_ref = bezier_tools::bezier(coeffs, tau_phase);
+    swf_vel_x_ref = bezier_tools::dtimeBezier(coeffs, tau_phase, 1.0 / this->T_SSP_);
+}
+
+
+void Controller::CalculateSwfZRef(double tau_phase, double &swf_pos_z_ref, double &swf_vel_z_ref)
+{
+    Eigen::Vector<double, 7> coeffs = Eigen::Vector<double, 7>::Zero();
+
+    double zm = this->p_swf_pos_z_max_ * alpha_bezier_swf_z;
+
+    coeffs(0) = 0.0;
+    coeffs(1) = 0.0;
+    coeffs(2) = 0.0;
+    coeffs(3) = zm;
+    coeffs(4) = 0.0;
+    coeffs(5) = 0.0;
+    coeffs(6) = 0.0;
+
+    swf_pos_z_ref = bezier_tools::bezier(coeffs, tau_phase);
+    swf_vel_z_ref = bezier_tools::dtimeBezier(coeffs, tau_phase, 1.0 / this->T_SSP_);
+}
+
 Eigen::Vector<double, N_Q> Controller::ResetMapQ(Eigen::Vector<double, N_Q> q_pos)
 {
     // Calculate the current outputs
@@ -457,6 +500,13 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
 
     std::cout << "step_length: " << step_length << std::endl;
 
+    double swf_pos_x_start = this->swf_pos_x_init_;
+    double swf_vel_x_start = 0.0;
+    double swf_acc_x_start = 0.0;
+    double swf_pos_x_end = step_length;
+    double swf_vel_x_end = 0.0;
+    double swf_acc_x_end = 0.0;
+
     // Calculate the desired swing foot references
     this->swf_pos_x_end_ = step_length;
     this->swf_pos_x_middle_ = (this->swf_pos_x_end_ + swf_pos_x_init_) / 2.0;
@@ -481,6 +531,10 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     double swf_vel_x_des = GetSwfVelXRef(swf_x_coeffs, t_step);
     double swf_vel_z_des = GetSwfVelZRef(swf_z_coeffs, t_step);
 
+
+
+
+
     // Blend the desired swing foot positions and velocities
     double tau_phase = std::clamp(t_step / (this->T_SSP_ * 0.8), 0.0, 1.0);
 
@@ -501,13 +555,24 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     double swf_vel_x_ref = (1.0 - tau_phase) * swf_vel_x_curr + tau_phase * swf_vel_x_des;
     //double swf_vel_z_ref = (1.0 - tau_phase) * swf_vel_z_curr + tau_phase * swf_vel_z_des;
 
+    // Get the swing foot references
+    
+    this->CalculateSwfXRef(tau_phase, step_length, swf_pos_x_ref, swf_vel_x_ref);
+    
+    double swf_pos_z_ref;
+    double swf_vel_z_ref;
+    this->CalculateSwfZRef(t_step / this->T_SSP_, swf_pos_z_ref, swf_vel_z_ref);
+
+    
+
+
     // Set the output references
     Eigen::Vector<double, N_OUTPUTS> y_ref_stf_frame;
     y_ref_stf_frame(OutputIDX::COM_POS_X) = y_stf_frame(OutputIDX::COM_POS_X);
     y_ref_stf_frame(OutputIDX::COM_POS_Z) = this->com_pos_z_ref_;
     y_ref_stf_frame(OutputIDX::COM_THETA) = this->com_theta_ref_;
     y_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_pos_x_ref;
-    y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_des;
+    y_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_pos_z_ref;
 
     // Calculate the desired joint angles
     q_pos_ref = SolveIK(y_ref_stf_frame);
@@ -520,7 +585,7 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     y_dot_ref_stf_frame(OutputIDX::COM_POS_Z) = 0.0;
     y_dot_ref_stf_frame(OutputIDX::COM_THETA) = 0.0;
     y_dot_ref_stf_frame(OutputIDX::SWF_POS_X) = swf_vel_x_ref;
-    y_dot_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_vel_z_des;
+    y_dot_ref_stf_frame(OutputIDX::SWF_POS_Z) = swf_vel_z_ref;
 
     // Calculate the desired joint velocities
     q_vel_ref = SolveIKDerivative(y_dot_ref_stf_frame, q_pos);
@@ -543,4 +608,154 @@ Eigen::Vector<double, 4> Controller::CalculateMotorTorques(Eigen::Vector<double,
     q_motor_torques(3) = this->kp_knee_ * (q_pos_ref(4) - q_pos(4)) + this->kd_knee_ * (q_vel_ref(4) - q_vel(4)) + q_tor_ref(4);
 
     return q_motor_torques;
+}
+
+namespace bezier_tools 
+{
+
+    double factorial(int n)
+    {
+        double out = 1.;
+        for (int i = 2; i <= n; ++i)
+            out *= i;
+        return out;
+    }
+
+    double nchoosek(int n, int k)
+    {
+        return factorial(n) / (factorial(k) * factorial(n - k));
+    }
+
+    double singleterm_bezier(int m, int k, double s)
+    {
+        if (k == 0)
+            return nchoosek(m, k) * std::pow(1 - s, m - k);
+        else if (k == m)
+            return nchoosek(m, k) * std::pow(s, k);
+        else
+            return nchoosek(m, k) * std::pow(s, k) * std::pow(1 - s, m - k);
+    }
+
+    double bezier(const Eigen::VectorXd& coeff, double s)
+    {
+        int m = coeff.size() - 1;
+        double fcn = 0.;
+        for (int k = 0; k <= m; ++k)
+        {
+            fcn += coeff(k) * singleterm_bezier(m, k, s);
+        }
+        return fcn;
+    }
+
+    void bezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out)
+    {
+        for (int i = 0; i < coeffs.rows(); ++i)
+            out(i) = bezier(coeffs.row(i), s);
+    }
+
+    void diff_coeff(const Eigen::VectorXd& coeff, Eigen::VectorXd& dcoeff)
+    {
+        int m = coeff.size() - 1;
+        Eigen::MatrixXd A(m, m + 1);
+        A.setZero();
+
+        for (int i = 0; i < m; ++i)
+        {
+            A(i, i) = -(m - i) * nchoosek(m, i) / nchoosek(m - 1, i);
+            A(i, i + 1) = (i + 1) * nchoosek(m, i + 1) / nchoosek(m - 1, i);
+        }
+        A(m - 1, m) = m * nchoosek(m, m);
+        dcoeff = A * coeff;
+    }
+
+    double dbezier(const Eigen::VectorXd& coeff, double s)
+    {
+        Eigen::VectorXd dcoeff;
+        dcoeff.resizeLike(coeff);
+        diff_coeff(coeff, dcoeff);
+        return bezier(dcoeff, s);
+    }
+
+    void dbezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out)
+    {
+        for (int i = 0; i < coeffs.rows(); ++i)
+            out(i) = dbezier(coeffs.row(i), s);
+    }
+
+    double d2bezier(const Eigen::VectorXd& coeff, double s)
+    {
+        Eigen::VectorXd dcoeff, d2coeff;
+        dcoeff.resizeLike(coeff);
+        d2coeff.resizeLike(coeff);
+        diff_coeff(coeff, dcoeff);
+        diff_coeff(dcoeff, d2coeff);
+        return bezier(d2coeff, s);
+    }
+
+    void d2bezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out)
+    {
+        for (int i = 0; i < coeffs.rows(); ++i)
+            out(i) = d2bezier(coeffs.row(i), s);
+    }
+
+
+    double dtimeBezier(const Eigen::VectorXd& coeff, double s, double sdot)
+    {
+        double out;
+        Eigen::VectorXd dcoeff;
+        dcoeff.resizeLike(coeff);
+        diff_coeff(coeff, dcoeff);
+        out = bezier(dcoeff, s) * sdot;
+        return out;
+    }
+    double dtime2Bezier(const Eigen::VectorXd& coeff, double s, double sdot)
+    {
+        double out;
+        Eigen::VectorXd dcoeff, d2coeff;
+        dcoeff.resizeLike(coeff);
+        d2coeff.resizeLike(coeff);
+        diff_coeff(coeff, dcoeff);
+        diff_coeff(dcoeff, d2coeff);
+        out = bezier(d2coeff, s) * pow(sdot, 2);
+        return out;
+    }
+
+    Eigen::MatrixXd A_bezier(const Eigen::VectorXd& coeff, double s, double sdot) {
+        Eigen::MatrixXd A;
+        int ncoeff = coeff.size();
+        A.resize(1, ncoeff);
+        for (int j = 0; j < ncoeff; j++) {
+            A(0, j) = nchoosek(ncoeff - 1, j) * pow(s, j) * pow(1 - s, ncoeff - 1 - j);
+        }
+        return A;
+    };
+
+    Eigen::MatrixXd dA_bezier(const Eigen::VectorXd& coeff, double s, double sdot) {
+        Eigen::MatrixXd A, A_vec, A_mat;
+        int ncoeff = coeff.size();
+        A_vec.resize(1, ncoeff - 1);
+        A_mat.resize(ncoeff - 1, ncoeff);
+        for (int j = 0; j < ncoeff - 1; j++) {
+            A_vec(0, j) = sdot * factorial(ncoeff - 1) / factorial(j) / factorial(ncoeff - j - 2) * pow(s, j) * pow(1 - s, ncoeff - 2 - j);
+            A_mat(j, j) = -1.;
+            A_mat(j, j + 1) = 1.;
+        }
+        A = A_vec * A_mat;
+        return A;
+    };
+
+    Eigen::MatrixXd d2A_bezier(const Eigen::VectorXd& coeff, double s, double sdot) {
+        Eigen::MatrixXd A, A_vec, A_mat;
+        int ncoeff = coeff.size();
+        A_vec.resize(1, ncoeff - 2);
+        A_mat.resize(ncoeff - 2, ncoeff);
+        for (int j = 0; j < ncoeff - 2; j++) {
+            A_vec(0, j) = pow(sdot, 2) * factorial(ncoeff - 1) / factorial(j) / factorial(ncoeff - j - 3) * pow(s, j) * pow(1 - s, ncoeff - 3 - j);
+            A_mat(j, j) = 1.;
+            A_mat(j, j + 1) = -2.;
+            A_mat(j, j + 2) = 1.;
+        }
+        A = A_vec * A_mat;
+        return A;
+    };
 }

@@ -83,13 +83,17 @@ class Controller
 
     public: void SetMassMatrix(Eigen::Matrix<double, N_Q, N_Q> M){M_ = M;}
 
+    public: void CalculateSwfXRef(double tau_phase, double step_length, double &swf_pos_x_ref, double &swf_vel_x_ref);
+
+    public: void CalculateSwfZRef(double tau_phase, double &swf_pos_z_ref, double &swf_vel_z_ref);
+
     // Model parameters
     private: double l_thigh_ = 0.5;
     private: double l_shin_ = 0.5;
 
     // Control parameters
     private: double com_pos_z_ref_ = 0.85;
-    private: double com_theta_ref_ = 0.14;
+    private: double com_theta_ref_ = 0.0;
 
     private: double T_SSP_ = 0.3;
     private: double T_DSP_ = 0.0;
@@ -106,12 +110,18 @@ class Controller
 
     private: double p_x_stf_world_frame_ = 0.0;
 
+    private: double p_swf_pos_z_max_ = 0.15;
+
+    private: double alpha_bezier_swf_z = 16.0 / 5.0;
+
     private: double v_x_ref_ = 0.0;
 
     private: double swf_pos_x_init_ = 0.0;
     private: double swf_vel_x_init_ = 0.0;
+    private: double swf_acc_x_init_ = 0.0;
     private: double swf_pos_x_end_ = 0.0;
     private: double swf_vel_x_end_ = 0.0;
+    private: double swf_acc_x_end_ = 0.0;
     private: double swf_pos_x_middle_ = 0.0;
     private: double t_swf_pos_x_middle_ = 0.0;
 
@@ -123,5 +133,25 @@ class Controller
     private: double t_swf_pos_z_middle_ = 0.0;
 
 };
+
+namespace bezier_tools {
+
+    double singleterm_bezier(int m, int k, double s);
+    double bezier(const Eigen::VectorXd& coeff, double s);
+    void bezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out);
+    double dbezier(const Eigen::VectorXd& coeff, double s);
+    void dbezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out);
+    double d2bezier(const Eigen::VectorXd& coeff, double s);
+    void d2bezier(const Eigen::MatrixXd& coeffs, double s, Eigen::VectorXd& out);
+
+    // time derivatives 
+    double dtime2Bezier(const Eigen::VectorXd& coeff, double s, double sdot);
+    double dtimeBezier(const Eigen::VectorXd& coeff, double s, double sdot);
+
+    Eigen::MatrixXd A_bezier(const Eigen::VectorXd& coeff, double s, double sdot);
+    Eigen::MatrixXd dA_bezier(const Eigen::VectorXd& coeff, double s, double sdot);
+    Eigen::MatrixXd d2A_bezier(const Eigen::VectorXd& coeff, double s, double sdot);
+
+}
 
 #endif // CONTROLLER_H

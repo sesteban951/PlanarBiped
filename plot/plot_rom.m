@@ -4,7 +4,7 @@
 clear; clc; close all;
 
 % import the data
-file_location = '../data/';
+file_location = 'cpp/logs/';
 % t = importdata(file_location + "time.csv");
 
 % % % unpack the output data
@@ -42,7 +42,7 @@ T_tot = T_SSP + T_DSP;
 
 % time window of interest
 % t_interval = [t(1), t(end)];
-t_interval = [t(end) - 5, t(end)];
+t_interval = [t(end) - 3, t(end)];
 idx = find(t >= t_interval(1) & t <= t_interval(2));
 
 t = t(idx);

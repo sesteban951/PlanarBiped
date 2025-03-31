@@ -47,11 +47,11 @@
 			<site name="stf_imu" size="0.01" pos="0 0 0" />
 			<body name="stance_lower_leg">
 				<joint name="stance_ankle_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-3.14 3.14" damping="0.1"/>
-				<geom name="stance_lower_leg" type="capsule" size="0.075 0.25" pos="0 0 0.25" material="stance_leg_color" conaffinity="0" contype="0" density="125"/>
+				<geom name="stance_lower_leg" type="capsule" size="0.075 0.25" pos="0 0 0.25" material="stance_leg_color" conaffinity="0" contype="0" density="100"/>
 
 				<body name="stance_upper_leg" pos="0 0 0.5">
 					<joint name="stance_knee_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-3.14 3.14" damping="0.1"/>
-					<geom name="stance_upper_leg" type="capsule" size="0.075 0.25" pos="0 0 0.25" material="stance_leg_color" conaffinity="0" contype="0" density="125"/>
+					<geom name="stance_upper_leg" type="capsule" size="0.075 0.25" pos="0 0 0.25" material="stance_leg_color" conaffinity="0" contype="0" density="100"/>
 
 					<body name="torso" pos="0 0 0.5">
 						<site name="torso_imu" size="0.01" pos="0 0 0" />
@@ -61,12 +61,12 @@
 						<body name="swing_upper_leg" pos="0 0 0">
 							<!-- Swing leg upper part -->
 							<joint name="swing_hip_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-3.14 3.14" damping="0.1"/>
-							<geom name="swing_upper_leg" type="capsule" size="0.075 0.25" pos="0 0 -0.25" material="swing_leg_color" conaffinity="0" contype="0" density="125"/>
+							<geom name="swing_upper_leg" type="capsule" size="0.075 0.25" pos="0 0 -0.25" material="swing_leg_color" conaffinity="0" contype="0" density="100"/>
 
 							<!-- Swing leg lower part -->
 							<body name="swing_lower_leg" pos="0 0 -0.5">
 								<joint name="swing_knee_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-3.14 3.14" damping="0.1"/>
-								<geom name="swing_lower_leg" type="capsule" size="0.075 0.25" pos="0 0 -0.25" material="swing_leg_color" conaffinity="0" contype="0" density="125"/>
+								<geom name="swing_lower_leg" type="capsule" size="0.075 0.25" pos="0 0 -0.25" material="swing_leg_color" conaffinity="0" contype="0" density="100"/>
 								<body name="swing_foot" pos="0 0 -0.5">
 									<site name="swf_imu" size="0.01" pos="0 0 0" />
 									<geom name="swing_foot" type="sphere" size="0.05" pos="0 0 0" rgba="0 1 0 1" conaffinity="0" contype="0" density="0"/>

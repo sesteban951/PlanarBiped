@@ -165,11 +165,11 @@ int main()
                 }
                 else if(t_curr < 6.0)
                 {
-                    controller.SetVelRef(0.4);
+                    controller.SetVelRef(0.5);
                 }
                 else
                 {
-                    controller.SetVelRef(0.75);
+                    controller.SetVelRef(1.0);
                 }
             }
 
