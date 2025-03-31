@@ -95,8 +95,8 @@ class Controller
     private: double T_DSP_ = 0.0;
     private: double g_ = 9.81;
 
-    private: double kp_hip_ = 400.0;
-    private: double kp_knee_ = 400.0;
+    private: double kp_hip_ = 300.0;
+    private: double kp_knee_ = 300.0;
     
     private: double kd_hip_ = 20.0;
     private: double kd_knee_ = 20.0;

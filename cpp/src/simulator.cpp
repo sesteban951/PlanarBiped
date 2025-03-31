@@ -130,7 +130,7 @@ void Simulator::UpdateScene()
     mjv_updateScene(MJ_MODEL_PTR, MJ_DATA_PTR, &(MJ_OPTIONS), NULL, &MJ_CAMERA, mjCAT_ALL, &MJ_SCENE);
 
     // Visualize the com
-    VisualizeSphere(this->com_pos_, 0.04, Eigen::Vector<double, 4>(1, 0, 0, 1));
+    VisualizeSphere(this->com_pos_, 0.06, Eigen::Vector<double, 4>(1, 0, 0, 1));
 
     // Update the visualization
     mjr_render(viewport, &MJ_SCENE, &MJ_CONTEXT);

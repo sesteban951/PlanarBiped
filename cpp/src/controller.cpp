@@ -439,6 +439,8 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     // Calculate the desired period 1 impact reference
     Eigen::Vector<double, 2> x_hlip_pre_impact_ref = CalculatePeriod1ImpactRef(this->v_x_ref_, lambda, this->T_SSP_, this->T_DSP_);
 
+    std::cout << "x_hlip_pre_impact_ref: " << x_hlip_pre_impact_ref.transpose() << std::endl;
+
     // Store the HLIP state
     Eigen::Vector<double, 2> x_hlip_curr;
     x_hlip_curr(0) = y_stf_frame(OutputIDX::COM_POS_X);
@@ -452,6 +454,8 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
 
     // Calculate the step length
     double step_length = this->v_x_ref_ * this->T_SSP_ + K_deadbeat.transpose() * (x_hlip_pre_impact - x_hlip_pre_impact_ref);
+
+    std::cout << "step_length: " << step_length << std::endl;
 
     // Calculate the desired swing foot references
     this->swf_pos_x_end_ = step_length;
@@ -478,10 +482,9 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
     double swf_vel_z_des = GetSwfVelZRef(swf_z_coeffs, t_step);
 
     // Blend the desired swing foot positions and velocities
-    double tau_phase = std::clamp(t_step / (this->T_SSP_ * 0.6), 0.0, 1.0);
-    
-    
-    t_step / this->T_SSP_;
+    double tau_phase = std::clamp(t_step / (this->T_SSP_ * 0.8), 0.0, 1.0);
+
+    std::cout << "tau_phase: " << tau_phase << std::endl;
 
     // The current swing foot position
     double swf_pos_x_curr = y_stf_frame(OutputIDX::SWF_POS_X);
@@ -493,10 +496,10 @@ void Controller::UpdateController(Eigen::Vector<double, N_Q> q_pos,
 
     //double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * swf_pos_x_des;
     double swf_pos_x_ref = (1.0 - tau_phase) * swf_pos_x_curr + tau_phase * step_length;
-    double swf_pos_z_ref = (1.0 - tau_phase) * swf_pos_z_curr + tau_phase * swf_pos_z_des;
+    //double swf_pos_z_ref = (1.0 - tau_phase) * swf_pos_z_curr + tau_phase * swf_pos_z_des;
 
     double swf_vel_x_ref = (1.0 - tau_phase) * swf_vel_x_curr + tau_phase * swf_vel_x_des;
-    double swf_vel_z_ref = (1.0 - tau_phase) * swf_vel_z_curr + tau_phase * swf_vel_z_des;
+    //double swf_vel_z_ref = (1.0 - tau_phase) * swf_vel_z_curr + tau_phase * swf_vel_z_des;
 
     // Set the output references
     Eigen::Vector<double, N_OUTPUTS> y_ref_stf_frame;
