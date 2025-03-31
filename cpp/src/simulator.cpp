@@ -325,6 +325,33 @@ Eigen::Vector<double, 3> Simulator::ComputeGlobalCoM()
     return com;
 }
 
+// Function to compute global COM velocity
+Eigen::Vector<double, 3> Simulator::ComputeCOMVelocity() 
+{
+    Eigen::Vector<double, 3> com_vel;
+    mjtNum total_mass = 0.0;
+    com_vel(0) = com_vel(1) = com_vel(2) = 0.0;
+
+    for (int i = 1; i < MJ_MODEL_PTR->nbody; i++) 
+    {
+        mjtNum mass = MJ_MODEL_PTR->body_mass[i];
+        total_mass += mass;
+
+        com_vel(0) += mass * MJ_DATA_PTR->cvel[6 * i + 3];  // x velocity
+        com_vel(1) += mass * MJ_DATA_PTR->cvel[6 * i + 4];  // y velocity
+        com_vel(2) += mass * MJ_DATA_PTR->cvel[6 * i + 5];  // z velocity
+    }
+
+    if (total_mass > 0) 
+    {
+        com_vel(0) /= total_mass;
+        com_vel(1) /= total_mass;
+        com_vel(2) /= total_mass;
+    }
+
+    return com_vel;
+}
+
 // Function to update the position of a geom dynamically
 void Simulator::UpdateGeomPosition(const std::string& geom_name, Eigen::Vector<double, 3> pos) 
 {

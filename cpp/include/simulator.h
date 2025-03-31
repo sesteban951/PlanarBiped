@@ -79,6 +79,8 @@ class Simulator
 
     public: Eigen::Vector<double, 3> ComputeGlobalCoM(); 
 
+    public: Eigen::Vector<double, 3> ComputeCOMVelocity(); 
+
     public: void UpdateGeomPosition(const std::string& geom_name, Eigen::Vector<double, 3> pos);
 
     public: Eigen::Matrix<double, N_Q, N_Q> GetMassMatrix();

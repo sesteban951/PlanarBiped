@@ -21,13 +21,13 @@ int main()
 
     Logger logger("/home/adrian/PlanarBiped/cpp/logs/log.csv");
 
-    std::string log_labels = "t, q_1, q_2, q_3, q_4, q_5, q_1_dot, q_2_dot, q_3_dot, q_4_dot, q_5_dot, eta_1, eta_2, eta_3, eta_4, eta_1_dot, eta_2_dot, eta_3_dot, eta_4_dot, z_1, z_1_dot,";
+    std::string log_labels = "t, q_1, q_2, q_3, q_4, q_5, q_1_dot, q_2_dot, q_3_dot, q_4_dot, q_5_dot, eta_1, eta_2, eta_3, eta_4, eta_1_dot, eta_2_dot, eta_3_dot, eta_4_dot, z_1, z_1_dot, y_1, y_2, y_3, y_4, y_5, y_dot_1, y_dot_2, y_dot_3, y_dot_4, y_dot_5,";
 
     logger.AddLabels(log_labels);
 
     simulator.Initialize("/home/adrian/PlanarBiped/models/biped/biped_pinned_hotdog.xml");
 
-    double simulation_rate = 500.0;
+    double simulation_rate = 1000.0;
     double visualization_rate = 60.0;
 
     // Set the initial conditions for the simulation
@@ -208,8 +208,18 @@ int main()
             z(0) = N * q_pos;
             z(1) = N * M * q_vel;
 
-            Eigen::Vector<double, Eigen::Dynamic> log_data(21);
-            log_data << t_curr, q_pos, q_vel, eta, z;
+            Eigen::Vector<double, N_OUTPUTS> y_stf_frame = controller.CalculateOutputsInStanceFootFrame(q_pos);
+            Eigen::Vector<double, N_OUTPUTS> y_dot_stf_frame = controller.CalculateOutputVel(q_pos, q_vel);
+
+            Eigen::Vector<double, 3> stf_pos_world_frame = controller.GetStfPosWorldFrame();
+            Eigen::Vector<double, 3> com_pos_world_frame = simulator.ComputeGlobalCoM();
+            Eigen::Vector<double, 3> com_vel_world_frame = simulator.ComputeCOMVelocity();
+            y_stf_frame(0) = com_pos_world_frame(0) - stf_pos_world_frame(0);
+            y_dot_stf_frame(0) = com_vel_world_frame(0);
+
+
+            Eigen::Vector<double, Eigen::Dynamic> log_data(31);
+            log_data << t_curr, q_pos, q_vel, eta, z, y_stf_frame, y_dot_stf_frame;
 
             logger.WriteToLog(log_data);
 
