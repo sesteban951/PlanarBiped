@@ -93,12 +93,12 @@ q1_max = 0.75;
 q1_min = 0.25;
 L_max = 9.8;
 L_min = 8.4;
-x_range = linspace(q1_min, q1_max, 25);
-y_range = linspace(L_min, L_max, 25);
+x_range = linspace(q1_min, q1_max, 10);
+y_range = linspace(L_min, L_max, 10);
 [X1, X2] = meshgrid(x_range, y_range);
 
 % compute the vector fields at each point
-vecotr_field = zeros(size(X1, 1), size(X1, 2), 2);
+vector_field = zeros(size(X1, 1), size(X1, 2), 2);
 for i = 1:size(X1, 1)
     for j = 1:size(X1, 2)
         
@@ -120,22 +120,80 @@ for i = 1:size(X1, 1)
         norm_vf = norm(vf);
 
         % store the vector field
-        vecotr_field(i, j, :) = vf / norm_vf;
+        vector_field(i, j, :) = vf / norm_vf;
     end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Phase portrait
-figure(6);
+% ==== Parameters ====
+fig_width = 1920;       % Figure width
+fig_height = 1080;      % Figure height
+line_width = 5;         % Line width for plots 
+marker_size = 50;        % Marker size
+font_size = 18;         % Font size for labels
+legend_font_size = 40;  % Font size for legend
+title_font_size = 40;   % Font size for title
+arrow_scale = 3;      % Scaling factor for stream arrows
+tick_font_size = 40;    % Font size for tick labels
+tick_length = [0.02, 0.02];  % Tick length (normalized units)
 
+% ==== Create Figure ====
+figure(6);
 hold on;
-plot(data.z_1(idx), data.z_1_dot(idx));
-plot(Q_1, L);
-streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
-xlabel('$z$', 'Interpreter', 'latex');
-ylabel('$\dot{z}$', 'Interpreter', 'latex');
-set(gcf, 'Position', [0, 0, 1920, 1080]);
+
+% ==== Plot Trajectories ====
+plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
+plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
+
+plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
+
+% Adjust the scaling of the streamlines
+h = streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), arrow_scale);
+
+% Set the color and line thickness of each streamline (arrow)
+for i = 1:length(h)
+    set(h(i), 'Color', [0 0 0], 'LineWidth', 2);  % Set the color to black and thickness to 2
+end
+
+% ==== Plot Trajectories ====
+plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'COlor', 'b');
+plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
+
+plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
+
+% ==== Set Labels with LaTeX ====
+xlabel('$z_1$', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('${z}_2$', 'Interpreter', 'latex', 'FontSize', font_size);
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+% Convert tick labels to LaTeX-style
+ax.XTickLabel = arrayfun(@(x) sprintf('$%.1f$', x), ax.XTick, 'UniformOutput', false);
+ax.YTickLabel = arrayfun(@(y) sprintf('$%.1f$', y), ax.YTick, 'UniformOutput', false);
+
+% Force LaTeX interpreter for ticks
+set(gca, 'TickLabelInterpreter', 'latex');
+
+% ==== Set Figure Size ====
+set(gcf, 'Position', [0, 0, fig_width, fig_height]);
+
+% ==== Add Legend ====
+%legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+
+% ==== Add Title ====
+title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Final Adjustments ====
+grid on;
+hold off;
+
+xlim([q1_min, q1_max]);
+ylim([L_min, L_max]);
 
 
 
@@ -178,7 +236,7 @@ set(gcf, 'Position', [0, 0, 1920, 1080]);
 % ylabel('v (m/s)');
 % 
 % % plot the vector fields
-% streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
+% streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2));
 % 
 % % Plot the HLIP trajectory
 % plot(P, V, 'r', 'Linewidth', 2);
