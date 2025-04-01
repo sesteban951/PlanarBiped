@@ -84,15 +84,17 @@ v_minus_H = sigma_P1 * (v_des * T_tot) / (2 + T_DSP * sigma_P1);
 [P, V] = GetHLIPPhaseTrajectory(z0_des, g, v_des, T_SSP, T_DSP);
 
 % Convert the HLIP trajectory into zero dynamics
-[Z, Z_dot] = ConvertHLIPToZeroDynamics(P, V, z0_des, l_thigh, l_shin, mass);
+[Q_1, Q_2, L] = ConvertHLIPToZeroDynamics(P, V, z0_des, l_thigh, l_shin, mass);
+
+[Q_1_dot, Q_2_dot, L_dot] = SolveHLIPVelIK(P, V, Q_1, Q_2, mass, g, l_thigh, l_shin);
 
 % compute some phase plots
-x_max = max([p; p_minus_H]);
-x_min = min([p; p_minus_H]);
-y_max = max([v; v_minus_H]);
-y_min = min([v; v_minus_H]);
-x_range = linspace(x_min, x_max, 25);
-y_range = linspace(y_min, y_max, 25);
+q1_max = 0.75;
+q1_min = 0.25;
+L_max = 9.8;
+L_min = 8.4;
+x_range = linspace(q1_min, q1_max, 25);
+y_range = linspace(L_min, L_max, 25);
 [X1, X2] = meshgrid(x_range, y_range);
 
 % compute the vector fields at each point
@@ -105,7 +107,14 @@ for i = 1:size(X1, 1)
              X2(i, j)];
         
         % compute the vecotr field
-        vf = A_SSP * x;
+        q_1 = x(1);
+        l = x(2);
+        [p_hlip, v_hlip, q_2] = GetHLIPOutputs(q_1, l, l_thigh, l_shin, mass, z0_des);
+        %[q_1, q_2, l] = ConvertHLIPToZeroDynamics(p_hlip, v_hlip, z0_des, l_thigh, l_shin, mass);
+        [q_1_dot, q_2_dot, l_dot] = SolveHLIPVelIK(p_hlip, v_hlip, q_1, q_2, mass, g, l_thigh, l_shin);
+
+        % Get the derivative
+        vf = [q_1_dot; l_dot];
 
         % normalize the vector field
         norm_vf = norm(vf);
@@ -117,127 +126,141 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% plot all the individual ROM flows
-figure(1);
-
-% plot the results
-subplot(2, 1, 1);
-grid on; hold on;
-yline(0);
-plot(t, p, 'LineWidth', 2);
-xlabel('t (s)');
-ylabel('p (m)');
-title('p = p_c - p_s');
-
-subplot(2, 1, 2);
-grid on; hold on;
-yline(0);
-% plot(t, v, 'LineWidth', 2);
-plot(t, v, 'b.');
-xlabel('t (s)');
-ylabel('v (m/s)');
-title('v');
-
-set(gcf, 'Position', [961, -200, 960, 450]);
-
-% subplot(3, 1, 3);
-% grid on; hold on;
-% yline(0);
-% % plot(t, u, 'LineWidth', 2);
-% xlabel('t (s)');
-% ylabel('u (m)');
-% title('u');
-
-% plot the continuous phase plot
-figure(2);
-grid on; hold on; axis equal;
-xlabel('p (m)');
-ylabel('v (m/s)');
-
-% plot the vector fields
-streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
-
-% Plot the HLIP trajectory
-plot(P, V, 'r', 'Linewidth', 2);
-
-% end and start points
-plot(p(1), v(1), 'go', 'MarkerSize', 10, 'LineWidth', 2); % start
-plot(p(end), v(end), 'ro','MarkerSize', 10, 'LineWidth', 2); % end
-
-% HLIP target point
-plot(p_minus_H, v_minus_H, 'pentagram', 'MarkerSize', 10, 'LineWidth', 2); % target
-
-% plot the actual trajectory
-plot(p, v, 'k', 'LineWidth', 2);
-
-set(gcf, 'Position', [961, 900, 960, 450]);
-
-
-% Plot the zero dynamics states
-
-figure(3);
-
-n_rows = 4;
-n_cols = 1;
-n = 0;
-
-% z1
-n = n + 1;
-subplot(n_rows, n_cols, n);
-hold on;
-grid on;
-plot(data.t(idx), data.z_1(idx));
-title('$z$', 'Interpreter', 'latex');
-xlabel('$t$', 'Interpreter', 'latex');
-ylabel('$z$', 'Interpreter', 'latex');
-
-% z_dot
-n = n + 1;
-subplot(n_rows, n_cols, n);
-hold on;
-grid on;
-plot(data.t(idx), data.z_1_dot(idx));
-title('$\dot{z}$', 'Interpreter', 'latex');
-xlabel('$t$', 'Interpreter', 'latex');
-ylabel('$\dot{z}$', 'Interpreter', 'latex');
-
-set(gcf, 'Position', [0, -200, 960, 450]);
-
 %% Phase portrait
-figure(4);
+figure(6);
 
 hold on;
 plot(data.z_1(idx), data.z_1_dot(idx));
-plot(Z, Z_dot);
+plot(Q_1, L);
+streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
 xlabel('$z$', 'Interpreter', 'latex');
 ylabel('$\dot{z}$', 'Interpreter', 'latex');
-set(gcf, 'Position', [0, 900, 960, 450]);
+set(gcf, 'Position', [0, 0, 1920, 1080]);
 
-%% Plot the zero dynamics states
-figure(5);
 
-n_rows = 4;
-n_cols = 1;
-n = 0;
 
-% z1
-n = n + 1;
-subplot(n_rows, n_cols, n);
-hold on;
-grid on;
-plot(data.t(idx), data.y_1(idx), 'b.');
-title('$p$', 'Interpreter', 'latex');
-xlabel('$t$', 'Interpreter', 'latex');
-ylabel('$p$', 'Interpreter', 'latex');
 
-% z_dot
-n = n + 1;
-subplot(n_rows, n_cols, n);
-hold on;
-grid on;
-plot(data.t(idx), data.y_dot_1(idx), 'b.');
-title('$\dot{v}$', 'Interpreter', 'latex');
-xlabel('$t$', 'Interpreter', 'latex');
-ylabel('$\dot{v}$', 'Interpreter', 'latex');
-
-set(gcf, 'Position', [0, -200, 960, 450]);
+% % plot all the individual ROM flows
+% figure(1);
+% 
+% % plot the results
+% subplot(2, 1, 1);
+% grid on; hold on;
+% yline(0);
+% plot(t, p, 'LineWidth', 2);
+% xlabel('t (s)');
+% ylabel('p (m)');
+% title('p = p_c - p_s');
+% 
+% subplot(2, 1, 2);
+% grid on; hold on;
+% yline(0);
+% % plot(t, v, 'LineWidth', 2);
+% plot(t, v, 'b.');
+% xlabel('t (s)');
+% ylabel('v (m/s)');
+% title('v');
+% 
+% set(gcf, 'Position', [961, -200, 960, 450]);
+% 
+% % subplot(3, 1, 3);
+% % grid on; hold on;
+% % yline(0);
+% % % plot(t, u, 'LineWidth', 2);
+% % xlabel('t (s)');
+% % ylabel('u (m)');
+% % title('u');
+% 
+% % plot the continuous phase plot
+% figure(2);
+% grid on; hold on; axis equal;
+% xlabel('p (m)');
+% ylabel('v (m/s)');
+% 
+% % plot the vector fields
+% streamslice(X1, X2, vecotr_field(:, :, 1), vecotr_field(:, :, 2));
+% 
+% % Plot the HLIP trajectory
+% plot(P, V, 'r', 'Linewidth', 2);
+% 
+% % end and start points
+% plot(p(1), v(1), 'go', 'MarkerSize', 10, 'LineWidth', 2); % start
+% plot(p(end), v(end), 'ro','MarkerSize', 10, 'LineWidth', 2); % end
+% 
+% % HLIP target point
+% plot(p_minus_H, v_minus_H, 'pentagram', 'MarkerSize', 10, 'LineWidth', 2); % target
+% 
+% % plot the actual trajectory
+% plot(p, v, 'k', 'LineWidth', 2);
+% 
+% set(gcf, 'Position', [961, 900, 960, 450]);
+% 
+% 
+% % Plot the zero dynamics states
+% 
+% figure(3);
+% 
+% n_rows = 4;
+% n_cols = 1;
+% n = 0;
+% 
+% % z1
+% n = n + 1;
+% subplot(n_rows, n_cols, n);
+% hold on;
+% grid on;
+% plot(data.t(idx), data.z_1(idx));
+% title('$z$', 'Interpreter', 'latex');
+% xlabel('$t$', 'Interpreter', 'latex');
+% ylabel('$z$', 'Interpreter', 'latex');
+% 
+% % z_dot
+% n = n + 1;
+% subplot(n_rows, n_cols, n);
+% hold on;
+% grid on;
+% plot(data.t(idx), data.z_1_dot(idx));
+% title('$\dot{z}$', 'Interpreter', 'latex');
+% xlabel('$t$', 'Interpreter', 'latex');
+% ylabel('$\dot{z}$', 'Interpreter', 'latex');
+% 
+% set(gcf, 'Position', [0, -200, 960, 450]);
+% 
+% %% Phase portrait
+% figure(4);
+% 
+% hold on;
+% plot(data.z_1(idx), data.z_1_dot(idx));
+% plot(Q_1, L);
+% xlabel('$z$', 'Interpreter', 'latex');
+% ylabel('$\dot{z}$', 'Interpreter', 'latex');
+% set(gcf, 'Position', [0, 900, 960, 450]);
+% 
+% %% Plot the zero dynamics states
+% figure(5);
+% 
+% n_rows = 4;
+% n_cols = 1;
+% n = 0;
+% 
+% % z1
+% n = n + 1;
+% subplot(n_rows, n_cols, n);
+% hold on;
+% grid on;
+% plot(data.t(idx), data.y_1(idx), 'b.');
+% title('$p$', 'Interpreter', 'latex');
+% xlabel('$t$', 'Interpreter', 'latex');
+% ylabel('$p$', 'Interpreter', 'latex');
+% 
+% % z_dot
+% n = n + 1;
+% subplot(n_rows, n_cols, n);
+% hold on;
+% grid on;
+% plot(data.t(idx), data.y_dot_1(idx), 'b.');
+% title('$\dot{v}$', 'Interpreter', 'latex');
+% xlabel('$t$', 'Interpreter', 'latex');
+% ylabel('$\dot{v}$', 'Interpreter', 'latex');
+% 
+% set(gcf, 'Position', [0, -200, 960, 450]);

@@ -1,11 +1,12 @@
-function [Z, Z_dot] = ConvertHLIPToZeroDynamics(P, V, z, l_thigh, l_shin, m)
+function [Q_1, Q_2, L] = ConvertHLIPToZeroDynamics(P, V, z, l_thigh, l_shin, m)
 
 N = length(P);
 
-Z = zeros(N, 1);
-Z_dot = zeros(N, 1);
+Q_1 = zeros(N, 1);
+Q_2 = zeros(N, 1);
+L = zeros(N, 1);
 
 for i = 1:N
-    Z(i) = SolveHLIPIK(P(i), z, l_thigh, l_shin);
-    Z_dot(i) = V(i) * z * m;
+    [Q_1(i), Q_2(i)] = SolveHLIPIK(P(i), z, l_thigh, l_shin);
+    L(i) = V(i) * z * m;
 end
