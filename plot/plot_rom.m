@@ -54,7 +54,16 @@ idx = find(t >= t_interval(1) & t <= t_interval(2));
 t = t(idx);
 p = p(idx);
 v = v(idx);
+post_impact = data.post_impact;
 % u = u(idx);
+
+post_impact_indices = find(post_impact == 1);
+pre_impact_indices = post_impact_indices - 1;
+
+Q_1_post_impact = data.z_1(post_impact_indices);
+Q_1_pre_impact = data.z_1(pre_impact_indices);
+L_post_impact = data.z_1_dot(post_impact_indices);
+L_pre_impact = data.z_1_dot(pre_impact_indices);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % HLIP Theoretical
@@ -86,6 +95,9 @@ v_minus_H = sigma_P1 * (v_des * T_tot) / (2 + T_DSP * sigma_P1);
 % Convert the HLIP trajectory into zero dynamics
 [Q_1, Q_2, L] = ConvertHLIPToZeroDynamics(P, V, z0_des, l_thigh, l_shin, mass);
 
+% [Q_1_post_impact, Q_2_post_impact, L_post_impact] = ConvertHLIPToZeroDynamics(p_post_impact, v_post_impact, z0_des, l_thigh, l_shin, mass);
+% [Q_1_pre_impact, Q_2_pre_impact, L_pre_impact] = ConvertHLIPToZeroDynamics(p_pre_impact, v_pre_impact, z0_des, l_thigh, l_shin, mass);
+
 [Q_1_dot, Q_2_dot, L_dot] = SolveHLIPVelIK(P, V, Q_1, Q_2, mass, g, l_thigh, l_shin);
 
 % compute some phase plots
@@ -93,8 +105,8 @@ q1_max = 0.75;
 q1_min = 0.25;
 L_max = 9.8;
 L_min = 8.4;
-x_range = linspace(q1_min, q1_max, 10);
-y_range = linspace(L_min, L_max, 10);
+x_range = linspace(q1_min, q1_max, 20);
+y_range = linspace(L_min, L_max, 20);
 [X1, X2] = meshgrid(x_range, y_range);
 
 % compute the vector fields at each point
@@ -131,6 +143,7 @@ fig_width = 1920;       % Figure width
 fig_height = 1080;      % Figure height
 line_width = 5;         % Line width for plots 
 marker_size = 50;        % Marker size
+marker_line_width = 5;
 font_size = 18;         % Font size for labels
 legend_font_size = 40;  % Font size for legend
 title_font_size = 40;   % Font size for title
@@ -145,21 +158,27 @@ hold on;
 % ==== Plot Trajectories ====
 plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
 plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
+plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
+plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [1 0 1]);
 
-plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
+% % Adjust the scaling of the streamlines
+% h = streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), arrow_scale);
+% 
+% % Set the color and line thickness of each streamline (arrow)
+% for i = 1:length(h)
+%     set(h(i), 'Color', [0 0 0], 'LineWidth', 2);  % Set the color to black and thickness to 2
+% end
 
-% Adjust the scaling of the streamlines
-h = streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), arrow_scale);
+% Define scaling factor for arrow lengths
+arrow_scale = 0.5;  % Adjust as needed
 
-% Set the color and line thickness of each streamline (arrow)
-for i = 1:length(h)
-    set(h(i), 'Color', [0 0 0], 'LineWidth', 2);  % Set the color to black and thickness to 2
-end
+% Plot vector field using quiver
+h = quiver(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), arrow_scale, 'k', 'LineWidth', 2);
 
 % ==== Plot Trajectories ====
-plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'COlor', 'b');
+plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
 plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
-
+plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
 plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
 
 % ==== Set Labels with LaTeX ====
@@ -172,8 +191,8 @@ ax.FontSize = tick_font_size;  % Adjust tick font size
 ax.TickLength = tick_length;   % Adjust tick length
 
 % Convert tick labels to LaTeX-style
-ax.XTickLabel = arrayfun(@(x) sprintf('$%.1f$', x), ax.XTick, 'UniformOutput', false);
-ax.YTickLabel = arrayfun(@(y) sprintf('$%.1f$', y), ax.YTick, 'UniformOutput', false);
+% ax.XTickLabel = arrayfun(@(x) sprintf('$%.1f$', x), ax.XTick, 'UniformOutput', false);
+% ax.YTickLabel = arrayfun(@(y) sprintf('$%.1f$', y), ax.YTick, 'UniformOutput', false);
 
 % Force LaTeX interpreter for ticks
 set(gca, 'TickLabelInterpreter', 'latex');
@@ -183,7 +202,7 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % ==== Add Legend ====
 %legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
-legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\mathcal{O}_\mathbf{z}^*$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
 title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
@@ -195,7 +214,7 @@ hold off;
 xlim([q1_min, q1_max]);
 ylim([L_min, L_max]);
 
-
+exportgraphics(gcf, 'figure.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 
 
 % % plot all the individual ROM flows
@@ -236,7 +255,7 @@ ylim([L_min, L_max]);
 % ylabel('v (m/s)');
 % 
 % % plot the vector fields
-% streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2));
+% %streamslice(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2));
 % 
 % % Plot the HLIP trajectory
 % plot(P, V, 'r', 'Linewidth', 2);
@@ -244,6 +263,8 @@ ylim([L_min, L_max]);
 % % end and start points
 % plot(p(1), v(1), 'go', 'MarkerSize', 10, 'LineWidth', 2); % start
 % plot(p(end), v(end), 'ro','MarkerSize', 10, 'LineWidth', 2); % end
+% plot(p_pre_impact, v_pre_impact, '*');
+% plot(p_post_impact, v_post_impact, 'o');
 % 
 % % HLIP target point
 % plot(p_minus_H, v_minus_H, 'pentagram', 'MarkerSize', 10, 'LineWidth', 2); % target
@@ -252,9 +273,9 @@ ylim([L_min, L_max]);
 % plot(p, v, 'k', 'LineWidth', 2);
 % 
 % set(gcf, 'Position', [961, 900, 960, 450]);
-% 
-% 
-% % Plot the zero dynamics states
+
+
+% Plot the zero dynamics states
 % 
 % figure(3);
 % 

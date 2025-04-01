@@ -21,7 +21,7 @@ int main()
 
     Logger logger("/home/adrian/PlanarBiped/cpp/logs/log.csv");
 
-    std::string log_labels = "t, q_1, q_2, q_3, q_4, q_5, q_1_dot, q_2_dot, q_3_dot, q_4_dot, q_5_dot, eta_1, eta_2, eta_3, eta_4, eta_1_dot, eta_2_dot, eta_3_dot, eta_4_dot, z_1, z_1_dot, y_1, y_2, y_3, y_4, y_5, y_dot_1, y_dot_2, y_dot_3, y_dot_4, y_dot_5,";
+    std::string log_labels = "t, q_1, q_2, q_3, q_4, q_5, q_1_dot, q_2_dot, q_3_dot, q_4_dot, q_5_dot, eta_1, eta_2, eta_3, eta_4, eta_1_dot, eta_2_dot, eta_3_dot, eta_4_dot, z_1, z_1_dot, y_1, y_2, y_3, y_4, y_5, y_dot_1, y_dot_2, y_dot_3, y_dot_4, y_dot_5, post_impact,";
 
     logger.AddLabels(log_labels);
 
@@ -77,6 +77,8 @@ int main()
 
     double alpha = 0.999;
     double com_vel_x_filtered = 0.0;
+
+    int post_impact = 0;
 
     while (true)
     {
@@ -146,6 +148,8 @@ int main()
 
             if(update_stance_foot == true)
             {
+                post_impact = 1;
+
                 // Compute the reset map
                 Eigen::Vector<double, N_Q> q_pos_pre_impact = q_pos;
                 Eigen::Vector<double, N_Q> q_vel_pre_impact = q_vel;
@@ -179,6 +183,10 @@ int main()
                 {
                     controller.SetVelRef(1.0);
                 }
+            }
+            else
+            {
+                post_impact = 0;
             }
 
             // Update controller
@@ -226,8 +234,8 @@ int main()
             y_dot_stf_frame(0) = com_vel_world_frame(0);
 
 
-            Eigen::Vector<double, Eigen::Dynamic> log_data(31);
-            log_data << t_curr, q_pos, q_vel, eta, z, y_stf_frame, y_dot_stf_frame;
+            Eigen::Vector<double, Eigen::Dynamic> log_data(32);
+            log_data << t_curr, q_pos, q_vel, eta, z, y_stf_frame, y_dot_stf_frame, post_impact;
 
             logger.WriteToLog(log_data);
 
