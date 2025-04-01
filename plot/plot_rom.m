@@ -65,6 +65,16 @@ Q_1_pre_impact = data.z_1(pre_impact_indices);
 L_post_impact = data.z_1_dot(post_impact_indices);
 L_pre_impact = data.z_1_dot(pre_impact_indices);
 
+q_2_pos = data.q_2(idx);
+q_3_pos = data.q_3(idx);
+q_4_pos = data.q_4(idx);
+q_5_pos = data.q_5(idx);
+
+q_2_vel = data.q_2_dot(idx);
+q_3_vel = data.q_3_dot(idx);
+q_4_vel = data.q_4_dot(idx);
+q_5_vel = data.q_5_dot(idx);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % HLIP Theoretical
 
@@ -152,7 +162,7 @@ tick_font_size = 40;    % Font size for tick labels
 tick_length = [0.02, 0.02];  % Tick length (normalized units)
 
 % ==== Create Figure ====
-figure(6);
+figure(1);
 hold on;
 
 % ==== Plot Trajectories ====
@@ -214,7 +224,75 @@ hold off;
 xlim([q1_min, q1_max]);
 ylim([L_min, L_max]);
 
-exportgraphics(gcf, 'figure.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+exportgraphics(gcf, 'phase_plot.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+exportgraphics(gcf, 'phase_plot.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+
+
+
+%% Actuated coordinates
+figure(2);
+
+n_rows = 2;
+n_cols = 2;
+n = 0;
+
+n = n + 1;
+subplot(n_rows, n_cols, n);
+plot(q_2_pos, q_2_vel, 'LineWidth', line_width, 'Color', 'b');
+xlabel('$q_2$', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('$\dot{q}_2$', 'Interpreter', 'latex', 'FontSize', font_size);
+title('Phase portrait (${q}_2$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+n = n + 1;
+subplot(n_rows, n_cols, n);
+plot(q_3_pos, q_3_vel, 'LineWidth', line_width, 'Color', 'b');
+xlabel('$q_3$', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('$\dot{q}_3$', 'Interpreter', 'latex', 'FontSize', font_size);
+title('Phase portrait (${q}_3$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+n = n + 1;
+subplot(n_rows, n_cols, n);
+plot(q_4_pos, q_4_vel, 'LineWidth', line_width, 'Color', 'b');
+xlabel('$q_4$', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('$\dot{q}_4$', 'Interpreter', 'latex', 'FontSize', font_size);
+title('Phase portrait (${q}_4$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+n = n + 1;
+subplot(n_rows, n_cols, n);
+plot(q_5_pos, q_5_vel, 'LineWidth', line_width, 'Color', 'b');
+xlabel('$q_5$', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('$\dot{q}_5$', 'Interpreter', 'latex', 'FontSize', font_size);
+title('Phase portrait (${q}_5$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+% Force LaTeX interpreter for ticks
+set(gca, 'TickLabelInterpreter', 'latex');
+
+% ==== Set Figure Size ====
+set(gcf, 'Position', [0, 0, fig_width, fig_height]);
+
+% Export the figure
+exportgraphics(gcf, 'phase_plots_actuated.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+exportgraphics(gcf, 'phase_plots_actuated.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 
 
 % % plot all the individual ROM flows
