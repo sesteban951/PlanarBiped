@@ -192,8 +192,9 @@ plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'Li
 plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
 
 % ==== Set Labels with LaTeX ====
-xlabel('$z_1$', 'Interpreter', 'latex', 'FontSize', font_size);
-ylabel('${z}_2$', 'Interpreter', 'latex', 'FontSize', font_size);
+xlabel('$z_1$ [rad]', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('${z}_2$ [kg$\cdot\mathrm{m^2}$/s]', 'Interpreter', 'latex', 'FontSize', font_size);
+
 
 % ==== Set Tick Sizes and LaTeX Ticks ====
 ax = gca;  % Get current axis
@@ -212,7 +213,7 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % ==== Add Legend ====
 %legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
-legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\mathcal{O}_\mathbf{z}^*$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\mathbf{z}^*$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
 title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
@@ -236,63 +237,36 @@ n_rows = 2;
 n_cols = 2;
 n = 0;
 
-n = n + 1;
-subplot(n_rows, n_cols, n);
-plot(q_2_pos, q_2_vel, 'LineWidth', line_width, 'Color', 'b');
-xlabel('$q_2$', 'Interpreter', 'latex', 'FontSize', font_size);
-ylabel('$\dot{q}_2$', 'Interpreter', 'latex', 'FontSize', font_size);
-title('Phase portrait (${q}_2$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
+for i = 2:5
+    n = n + 1;
+    subplot(n_rows, n_cols, n);
+    
+    % Plot phase portrait
+    plot(eval(sprintf('q_%d_pos', i)), eval(sprintf('q_%d_vel', i)), 'LineWidth', line_width, 'Color', 'b');
+    grid on;
+    
+    % Labels and title
+    %xlabel_handle = xlabel(sprintf('$q_%d$', i), 'Interpreter', 'latex', 'FontSize', font_size);
+    ylabel(sprintf('$\\dot{q}_%d$ [rad/s]', i), 'Interpreter', 'latex', 'FontSize', font_size);
+    %title(sprintf('Phase portrait (${q}_%d$)', i), 'Interpreter', 'latex', 'FontSize', title_font_size);
+    
+    % Adjust axis properties
+    ax = gca;  
+    ax.FontSize = tick_font_size;  
+    ax.TickLength = tick_length;   
+    set(gca, 'TickLabelInterpreter', 'latex');
+    
+    % Move x-axis label closer
+    %xlabel_handle.Position(2) = xlabel_handle.Position(2) - 0.02; % Adjust this value if necessary
+end
 
-% ==== Set Tick Sizes and LaTeX Ticks ====
-ax = gca;  % Get current axis
-ax.FontSize = tick_font_size;  % Adjust tick font size
-ax.TickLength = tick_length;   % Adjust tick length
-
-n = n + 1;
-subplot(n_rows, n_cols, n);
-plot(q_3_pos, q_3_vel, 'LineWidth', line_width, 'Color', 'b');
-xlabel('$q_3$', 'Interpreter', 'latex', 'FontSize', font_size);
-ylabel('$\dot{q}_3$', 'Interpreter', 'latex', 'FontSize', font_size);
-title('Phase portrait (${q}_3$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
-
-% ==== Set Tick Sizes and LaTeX Ticks ====
-ax = gca;  % Get current axis
-ax.FontSize = tick_font_size;  % Adjust tick font size
-ax.TickLength = tick_length;   % Adjust tick length
-
-n = n + 1;
-subplot(n_rows, n_cols, n);
-plot(q_4_pos, q_4_vel, 'LineWidth', line_width, 'Color', 'b');
-xlabel('$q_4$', 'Interpreter', 'latex', 'FontSize', font_size);
-ylabel('$\dot{q}_4$', 'Interpreter', 'latex', 'FontSize', font_size);
-title('Phase portrait (${q}_4$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
-
-% ==== Set Tick Sizes and LaTeX Ticks ====
-ax = gca;  % Get current axis
-ax.FontSize = tick_font_size;  % Adjust tick font size
-ax.TickLength = tick_length;   % Adjust tick length
-
-n = n + 1;
-subplot(n_rows, n_cols, n);
-plot(q_5_pos, q_5_vel, 'LineWidth', line_width, 'Color', 'b');
-xlabel('$q_5$', 'Interpreter', 'latex', 'FontSize', font_size);
-ylabel('$\dot{q}_5$', 'Interpreter', 'latex', 'FontSize', font_size);
-title('Phase portrait (${q}_5$)', 'Interpreter', 'latex', 'FontSize', title_font_size);
-
-% ==== Set Tick Sizes and LaTeX Ticks ====
-ax = gca;  % Get current axis
-ax.FontSize = tick_font_size;  % Adjust tick font size
-ax.TickLength = tick_length;   % Adjust tick length
-
-% Force LaTeX interpreter for ticks
-set(gca, 'TickLabelInterpreter', 'latex');
-
-% ==== Set Figure Size ====
+% Set Figure Size
 set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % Export the figure
 exportgraphics(gcf, 'phase_plots_actuated.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'phase_plots_actuated.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+
 
 
 % % plot all the individual ROM flows
