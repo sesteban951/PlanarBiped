@@ -2,4 +2,3 @@
 *.TXT
 *.json
 **/build
-**/logs
