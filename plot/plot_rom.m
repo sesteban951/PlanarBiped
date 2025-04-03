@@ -110,14 +110,21 @@ v_minus_H = sigma_P1 * (v_des * T_tot) / (2 + T_DSP * sigma_P1);
 
 [Q_1_dot, Q_2_dot, L_dot] = SolveHLIPVelIK(P, V, Q_1, Q_2, mass, g, l_thigh, l_shin);
 
+
+% 
+
+
 % compute some phase plots
 q1_max = 0.75;
 q1_min = 0.25;
 L_max = 9.8;
 L_min = 8.4;
-x_range = linspace(q1_min, q1_max, 20);
-y_range = linspace(L_min, L_max, 20);
+x_range = linspace(q1_min, q1_max, 12);
+y_range = linspace(L_min, L_max, 10);
 [X1, X2] = meshgrid(x_range, y_range);
+
+x_dist = q1_max - q1_min;
+y_dist = L_max - L_min;
 
 % compute the vector fields at each point
 vector_field = zeros(size(X1, 1), size(X1, 2), 2);
@@ -141,8 +148,58 @@ for i = 1:size(X1, 1)
         % normalize the vector field
         norm_vf = norm(vf);
 
+        v_normed = vf / norm_vf;
+
+        L_uv = ((v_normed(1) / x_dist)^2 + (v_normed(2) / y_dist)^2) * 0.5;
+
         % store the vector field
-        vector_field(i, j, :) = vf / norm_vf;
+        vector_field(i, j, :) = v_normed / L_uv;
+
+    
+    end
+end
+
+% Create a vector field for the HLIP orbit
+
+p_min =-0.18;
+p_max = 0.18;
+
+v_min = 0.95;
+v_max = 1.1;
+
+p_range = linspace(p_min, p_max, 12);
+v_range = linspace(v_min, v_max, 10);
+[P_mesh, V_mesh] = meshgrid(p_range, v_range);
+
+x_dist = q1_max - q1_min - 0.2;
+y_dist = L_max - L_min;
+
+% compute the vector fields at each point
+PV_vector_field = zeros(size(P_mesh, 1), size(P_mesh, 2), 2);
+for i = 1:size(P_mesh, 1)
+    for j = 1:size(P_mesh, 2)
+        
+        % get the state
+        x = [P_mesh(i, j);
+             V_mesh(i, j)];
+        
+        % compute the vecotr field
+        p = x(1);
+        v = x(2);
+
+        p_dot = v;
+        v_dot = g / z0_des * p;
+
+        % Get the derivative
+        pv_dot = [p_dot; v_dot];
+
+        % normalize the vector field
+        pv_dot_normed = pv_dot / norm(pv_dot);
+
+        L_uv = 1.0; %((x_dist * v_normed(1))^2 + (y_dist * v_normed(2))^2) * 0.5;
+
+        % store the vector field
+        PV_vector_field(i, j, :) = pv_dot_normed * L_uv;    
     end
 end
 
@@ -180,10 +237,51 @@ plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', marker_l
 % end
 
 % Define scaling factor for arrow lengths
-arrow_scale = 0.5;  % Adjust as needed
 
 % Plot vector field using quiver
-h = quiver(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), arrow_scale, 'k', 'LineWidth', 2);
+%h = quiver(X1, X2, vector_field(:, :, 1), vector_field(:, :, 2), 'k', 'LineWidth', 2, 'MaxHeadSize', 4);
+% Arrow scaling factor (adjust to control arrow size)
+arrow_scale = 0.03;  
+
+% Iterate through each vector field point
+[n_rows, n_cols, ~] = size(vector_field);
+for i = 1:n_rows
+    for j = 1:n_cols
+        % Extract vector components
+        x = X1(i, j);
+        y = X2(i, j);
+        u = vector_field(i, j, 1) * arrow_scale;
+        v = vector_field(i, j, 2) * arrow_scale;
+        
+        % % Normalize arrow length for consistency
+        % arrow_length = sqrt(u^2 + v^2);
+        % if arrow_length > 0
+        %     u = (u / arrow_length) * arrow_scale;
+        %     v = (v / arrow_length) * arrow_scale;
+        % end
+        
+        % Compute arrowhead points
+        shaft_x = [x, x + u];  
+        shaft_y = [y, y + v];
+        
+        % Arrowhead shape parameters
+        head_size = 1.25 * arrow_scale;
+        head_angle = pi / 24;  % 30-degree angle
+        
+        % Compute arrowhead direction
+        theta = atan2(v, u);
+        left_x = x + u - head_size * cos(theta - head_angle);
+        left_y = y + v - head_size * sin(theta - head_angle);
+        right_x = x + u - head_size * cos(theta + head_angle);
+        right_y = y + v - head_size * sin(theta + head_angle);
+        
+        % Draw arrow shaft
+        line(shaft_x, shaft_y, 'Color', 'k', 'LineWidth', 3);
+
+        % Draw arrowhead
+        patch([x + u, left_x, right_x], [y + v, left_y, right_y], 'k', 'EdgeColor', 'none');
+    end
+end
 
 % ==== Plot Trajectories ====
 plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
@@ -266,6 +364,120 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 % Export the figure
 exportgraphics(gcf, 'phase_plots_actuated.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'phase_plots_actuated.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+
+
+%% HLIP Plot
+close(figure(3));
+
+arrow_scale = 0.02;
+
+% ==== Create Figure ====
+figure(3);
+hold on;
+
+% ==== Plot Trajectories ====
+plot(P, V, 'LineWidth', line_width, 'Color', 'r');
+plot(P(end-1), V(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
+
+%h = quiver(P_mesh, V_mesh, PV_vector_field(:, :, 1), PV_vector_field(:, :, 2), 'k', 'LineWidth', 2, 'MaxHeadSize', 4);
+
+% Iterate through each vector field point
+[n_rows, n_cols, ~] = size(PV_vector_field);
+for i = 1:n_rows
+    for j = 1:n_cols
+        % Extract vector components
+        x = P_mesh(i, j);
+        y = V_mesh(i, j);
+        u = PV_vector_field(i, j, 1) * arrow_scale;
+        v = PV_vector_field(i, j, 2) * arrow_scale;
+        
+        % % Normalize arrow length for consistency
+        % arrow_length = sqrt(u^2 + v^2);
+        % if arrow_length > 0
+        %     u = (u / arrow_length) * arrow_scale;
+        %     v = (v / arrow_length) * arrow_scale;
+        % end
+        
+        % Compute arrowhead points
+        shaft_x = [x, x + u];  
+        shaft_y = [y, y + v];
+        
+        % Arrowhead shape parameters
+        head_size = 0.4 * arrow_scale;
+        head_angle = pi / 12;  % 30-degree angle
+        
+        % Compute arrowhead direction
+        theta = atan2(v, u);
+        left_x = x + u - head_size * cos(theta - head_angle);
+        left_y = y + v - head_size * sin(theta - head_angle);
+        right_x = x + u - head_size * cos(theta + head_angle);
+        right_y = y + v - head_size * sin(theta + head_angle);
+        
+        % Draw arrow shaft
+        line(shaft_x, shaft_y, 'Color', 'k', 'LineWidth', 3);
+
+        % Draw arrowhead
+        patch([x + u, left_x, right_x], [y + v, left_y, right_y], 'k', 'EdgeColor', 'none');
+    end
+end
+
+
+plot(P, V, 'LineWidth', line_width, 'Color', 'r');
+plot(P(end-1), V(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
+
+% ==== Set Labels with LaTeX ====
+xlabel('$p$ [m]', 'Interpreter', 'latex', 'FontSize', font_size);
+ylabel('$v$ [$\mathrm{m}$/s]', 'Interpreter', 'latex', 'FontSize', font_size);
+
+
+% ==== Set Tick Sizes and LaTeX Ticks ====
+ax = gca;  % Get current axis
+ax.FontSize = tick_font_size;  % Adjust tick font size
+ax.TickLength = tick_length;   % Adjust tick length
+
+% Convert tick labels to LaTeX-style
+% ax.XTickLabel = arrayfun(@(x) sprintf('$%.1f$', x), ax.XTick, 'UniformOutput', false);
+% ax.YTickLabel = arrayfun(@(y) sprintf('$%.1f$', y), ax.YTick, 'UniformOutput', false);
+
+% Force LaTeX interpreter for ticks
+set(gca, 'TickLabelInterpreter', 'latex');
+
+% ==== Set Figure Size ====
+set(gcf, 'Position', [0, 0, fig_width, fig_height]);
+
+% ==== Add Legend ====
+%legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+
+% ==== Add Title ====
+title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
+
+% ==== Final Adjustments ====
+grid on;
+hold off;
+
+x_padding = 0.0;
+y_padding = 0.0;
+xlim([p_min, p_max]);
+ylim([v_min, v_max]);
+
+exportgraphics(gcf, 'hlip_plot.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+exportgraphics(gcf, 'hlip_plot.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
