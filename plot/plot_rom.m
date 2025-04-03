@@ -314,7 +314,7 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\mathbf{z}^*$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
-title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
+%title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
 
 % ==== Final Adjustments ====
 grid on;
@@ -325,6 +325,7 @@ ylim([L_min, L_max]);
 
 exportgraphics(gcf, 'phase_plot.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'phase_plot.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+print(gcf, 'phase_plot.svg', '-dsvg');
 
 
 
@@ -364,6 +365,7 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 % Export the figure
 exportgraphics(gcf, 'phase_plots_actuated.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'phase_plots_actuated.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+print(gcf, 'phase_plots_actuated.svg', '-dsvg');
 
 
 %% HLIP Plot
@@ -447,10 +449,10 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % ==== Add Legend ====
 %legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
-legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_{\mathbf{r}}$", "$\mathbf{r}^*$", "$\mathbf{Q}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
-title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
+%title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
 
 % ==== Final Adjustments ====
 grid on;
@@ -463,6 +465,7 @@ ylim([v_min, v_max]);
 
 exportgraphics(gcf, 'hlip_plot.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'hlip_plot.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
+print(gcf, 'hlip_plot.svg', '-dsvg');
 
 
 
