@@ -225,7 +225,7 @@ hold on;
 % ==== Plot Trajectories ====
 plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
 plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
-plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
+%plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
 plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [1 0 1]);
 
 % % Adjust the scaling of the streamlines
@@ -286,7 +286,7 @@ end
 % ==== Plot Trajectories ====
 plot(data.z_1(idx), data.z_1_dot(idx), 'LineWidth', line_width, 'Color', 'b');
 plot(Q_1, L, 'LineWidth', line_width, 'Color', 'r');
-plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
+%plot(Q_1_pre_impact(end), L_pre_impact(end), '*', 'MarkerSize', marker_size, 'LineWidth', marker_line_width, 'Color', [0 1 1]);
 plot(Q_1(end-1), L(end-1), '*', 'MarkerSize', marker_size, 'LineWidth', 5, 'Color', [1 0 1]);
 
 % ==== Set Labels with LaTeX ====
@@ -311,7 +311,10 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % ==== Add Legend ====
 %legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
-legend("$\mathcal{O}_\mathbf{z}$", "$\mathcal{O}_{\Xi(\mathbf{r})}$", "$\mathbf{z}^*$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\Xi}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+%legend("$\mathcal{O}_\mathbf{z}$", "$\Xi(\mathcal{O}_\mathbf{r})$", "$\mathbf{z}^*$", "${\Xi(\mathbf{r}^*)}$", "$\dot{\mathbf{z}}$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+%legend("$\mathbf{z}(t)$", "$\mathcal{O}_{\mathbf{z}}$", "$\mathbf{z}$", "$\mathbf{z}^*$", "$\dot{\mathbf{z}}$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathbf{z}(t)$", "$\mathcal{O}_{\mathbf{z}}$", "$\mathbf{z}^*$", "$\dot{{{\Xi}}}(\mathbf{r})$", ...
+    'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
 %title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
@@ -325,8 +328,15 @@ ylim([L_min, L_max]);
 
 exportgraphics(gcf, 'phase_plot.eps', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
 exportgraphics(gcf, 'phase_plot.pdf', 'ContentType', 'vector', 'BackgroundColor', 'none', 'Resolution', 300);
-print(gcf, 'phase_plot.svg', '-dsvg');
+%print(gcf, 'phase_plot.svg', '-dsvg');
 
+ax = gca;
+ax.Units = 'normalized';
+ax.Position = [0 0 1 1]; % Expand axes to fill the figure
+
+set(gcf, 'Units', 'normalized', 'OuterPosition', [0 0 1 1]); % Resize figure window
+
+print(gcf, 'phase_plot.svg', '-dsvg', '-painters');
 
 
 %% Actuated coordinates
@@ -449,7 +459,7 @@ set(gcf, 'Position', [0, 0, fig_width, fig_height]);
 
 % ==== Add Legend ====
 %legend("$z^{*}$", "$\Xi^*$", "$\mathbf{f}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
-legend("$\mathcal{O}_{\mathbf{r}}$", "$\mathbf{r}^*$", "$\mathbf{Q}(\mathbf{r})$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
+legend("$\mathcal{O}_{\mathbf{r}}$", "$\mathbf{r}^*$", "$\dot{\mathbf{r}}$", 'Interpreter', 'latex', 'FontSize', legend_font_size, 'Location', 'Southeast');
 
 % ==== Add Title ====
 %title('\textbf{Phase Portrait with Vector Field}', 'Interpreter', 'latex', 'FontSize', title_font_size);
